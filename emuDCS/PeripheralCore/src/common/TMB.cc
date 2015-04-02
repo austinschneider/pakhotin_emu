@@ -3645,7 +3645,7 @@ END:
 				// Begin: CFEB Injector Control
 				//**********************************************************************
         //
-        void TMB::DisableCFEBInputs(bool debug){
+        void TMB::DisableCLCTInputs(bool debug){
             //
             if ( debug ) printf("   TMB::DisableCFEBInputs: Begin\n");
             //
@@ -3667,7 +3667,7 @@ END:
   					if ( debug ) printf("   TMB::DisableCFEBInputs: End\n");
         }
         //
-        void TMB::EnableCFEBInputs(int CFEBnOn, bool debug){
+        void TMB::EnableCLCTInputs(int CFEBnOn, bool debug){
             //
             if ( debug ) printf("   TMB::EnableCFEBInputs: Begin\n");
             //
@@ -3696,7 +3696,7 @@ END:
   					if ( debug ) printf("   TMB::EnableCFEBInputs: End\n");
         }
 				//
-				void TMB::EnableCFEBsToTrigger(bool debug){
+				void TMB::EnableCLCTsToTrigger(bool debug){
             //
             if ( debug ) printf("   TMB::EnableCFEBsToTrigger: End\n");
             //
@@ -5262,9 +5262,9 @@ END:
 						alct_injector_delay = 13;   // Default value
 						SetALCTInjectorDelay(alct_injector_delay, debug); // Set ALCT injector delay
 						
-						DisableCFEBInputs(debug); // Turn off CFEB cable inputs
+						DisableCLCTInputs(debug); // Turn off CFEB cable inputs
 						
-            EnableCFEBsToTrigger(debug); // Turn on CFEB enables to over-ride mask_all
+            EnableCLCTsToTrigger(debug); // Turn on CFEB enables to over-ride mask_all
 
             // Turn off internal level 1 accept for sequencer
             adr     = seq_l1a_adr;
@@ -14955,7 +14955,7 @@ exit:
             TMBConfigurationRegister.push_back(phaser_cfeb3_rxd_adr);  //0x118 digital phase shifter: cfeb3_rx
             TMBConfigurationRegister.push_back(phaser_cfeb4_rxd_adr);  //0x11A digital phase shifter: cfeb4_rx
             TMBConfigurationRegister.push_back(cfeb0_3_interstage_adr);//0x11C CFEB to TMB data delay: cfeb[0-3]
-            TMBConfigurationRegister.push_back(cfeb4_interstage_adr)  ;//0x11E CFEB to TMB data delay: cfeb4
+            TMBConfigurationRegister.push_back(cfeb4_6_interstage_adr)  ;//0x11E CFEB to TMB data delay: cfeb4
             //
             // hot channel masks:
             TMBConfigurationRegister.push_back(hcm001_adr);  //0x4A distrip hot channel mask CFEB 0 layers 0,1 
@@ -16255,7 +16255,7 @@ exit:
                 read_cfeb2_rxd_int_delay_  = ExtractValueFromData(data,cfeb2_rxd_int_delay_bitlo,cfeb2_rxd_int_delay_bithi);
                 read_cfeb3_rxd_int_delay_  = ExtractValueFromData(data,cfeb3_rxd_int_delay_bitlo,cfeb3_rxd_int_delay_bithi);
                 //
-            } else if ( address == cfeb4_interstage_adr ) {
+            } else if ( address == cfeb4_6_interstage_adr ) {
                 //---------------------------------------------------------------------
                 // 0X11E = ADR_DELAY1_INT:  CFEB to TMB "interstage" delays
                 //---------------------------------------------------------------------
@@ -17128,7 +17128,7 @@ exit:
                 (*MyOutput_) << "    CFEB2 receive interstage delay    = " << std::dec << read_cfeb2_rxd_int_delay_ << std::endl;
                 (*MyOutput_) << "    CFEB3 receive interstage delay    = " << std::dec << read_cfeb3_rxd_int_delay_ << std::endl;
                 //
-            } else if ( address == cfeb4_interstage_adr ) {
+            } else if ( address == cfeb4_6_interstage_adr ) {
                 //--------------------------------------------------------------
                 // 0X11E = ADR_DELAY1_INT:  CFEB to TMB "interstage" delays
                 //--------------------------------------------------------------
@@ -17707,7 +17707,7 @@ exit:
                 InsertValueIntoDataWord(cfeb2_rxd_int_delay_,cfeb2_rxd_int_delay_bithi,cfeb2_rxd_int_delay_bitlo,&data_word);
                 InsertValueIntoDataWord(cfeb3_rxd_int_delay_,cfeb3_rxd_int_delay_bithi,cfeb3_rxd_int_delay_bitlo,&data_word);
                 //
-            } else if ( address == cfeb4_interstage_adr ) {    
+            } else if ( address == cfeb4_6_interstage_adr ) {    
                 //---------------------------------------------------------------------
                 // 0X11E = ADR_DELAY1_INT:  CFEB to TMB "interstage" delays
                 //---------------------------------------------------------------------

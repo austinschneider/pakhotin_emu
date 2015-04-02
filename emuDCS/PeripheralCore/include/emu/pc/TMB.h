@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+//------------------------------------------------------------------------
 // $Id: TMB.h,v 1.21 2012/09/05 22:34:46 liu Exp $
 // $Log: TMB.h,v $
 // Revision 1.21  2012/09/05 22:34:46  liu
@@ -407,6 +407,7 @@
 #include "emu/pc/JTAG_constants.h"
 #include "emu/pc/TMB_trigInjector_test.h"
 #include <cstdio>
+#include <cassert>
 #include <vector>
 #include <string>
 #include <bitset>
@@ -451,11 +452,10 @@ public:
   //
   //! Write "data" into VME "address"
   void WriteRegister(int address, int data, bool debug = false);
-  //! Write data which has been set by Set... methods
-  void WriteRegister(int address, bool debug = false);
   //!return value read from "address"
   int  ReadRegister(int address, bool debug = false);
-
+  //! Write data which has been set by Set... methods
+  void WriteRegister(int address, bool debug = false);
   //
   void DumpAddress(int);
   //
@@ -490,7 +490,7 @@ public:
   //!Extract TMB raw hits data from VME
   void TMBRawhits(int microseconds_between_data_reads);
   /// default is 0.1seconds
-  void TMBRawhits(); 
+  void TMBRawhits();
   void ResetRAMAddress();
   inline int GetAlctInClctMatchWindow() { return h11_alct_in_clct_match_window_ ; }
   void PrintTMBRawHits();
@@ -510,7 +510,7 @@ public:
   void SetALCTPatternTrigger();
   void SetCLCTPatternTrigger();
   //
-  inline void SetHardwareVersion(int version) {hardware_version_ = version;}
+  //  inline void SetHardwareVersion(int version) {hardware_version_ = version;} //in TMB constructor now
   inline int GetHardwareVersion() {return hardware_version_;}
   //
   //!read the Firmware date from the TMB
@@ -555,6 +555,16 @@ public:
   inline int  GetExpectedRatFirmwareYear() { return rat_firmware_year_; }
   //
   int  PowerComparator();
+
+  bool ExpectedTmbFirmwareConfigIsSet(){
+    return GetExpectedTmbFirmwareYear() > 0 && GetExpectedTmbFirmwareMonth() > 0 && GetExpectedTmbFirmwareDay() > 0;
+  }
+  int HasGroupedME11ABCFEBRxValues(){
+    if (GetHardwareVersion() < 2) return -1;
+    if (not ExpectedTmbFirmwareConfigIsSet() ) return -1;
+    if (GetExpectedTmbFirmwareYear() >= 2015) return 1;
+    else return 0;
+  }
   //
   // called by TRGMODE, depending on version_
   void trgmode_bprsq_alct();
@@ -568,20 +578,23 @@ public:
   void EnableL1aRequest();
   void DisableL1aRequest();
   //
-  
-//  void DisableCLCTInputs();
-  void DisableCFEBInputs(bool debug = false);
-//  void EnableCLCTInputs(int CLCTInputs );
-  void EnableCFEBInputs(int CFEBnOn = 0x1f, bool debug = false);
-  void EnableCFEBsToTrigger(bool debug = false);
+  //void EnableCLCTInputs(int CFEBnOn = 0x7f, bool debug = false);
+  void EnableCLCTInputs(int CLCTInputs = 0x7f);
+  //void DisableCLCTInputs(bool debug = false);
+  void DisableCLCTInputs();
+  //void DisableALCTInputs(bool debug = false);
+  void DisableALCTInputs();
+  void EnableCLCTsToTrigger(bool debug = false);
   //
-  void DisableALCTInputs(bool debug = false);
-  void DisableALCTCLCTSync(bool debug = false);
+  //void DisableALCTCLCTSync(bool debug = false);
+  void DisableALCTCLCTSync();
   void SetALCTInjectorDelay(unsigned int injectorDelay = 13, bool debug = false);
   //
-  void DisableExternalCCB(bool debug = false);
+  //void DisableExternalCCB(bool debug = false);
+  void DisableExternalCCB();
   //
-  void EnableInternalL1aEmulator(bool debug = false);
+  //void EnableInternalL1aEmulator(bool debug = false);
+  void EnableInternalL1aEmulator();
   void RequestCCBL1aOnSequencer(bool debug = false);
   void DisableInternalL1aSequencer();
   void EnableInternalL1aSequencer();
@@ -591,10 +604,10 @@ public:
   int  CCB_command_from_TTC();
   //
   void ExtClctTrigFromCCBonly();
-  int ReadTMBtempPCB();  
-  int ReadTMBtempFPGA();  
-  int ReadTMBtCritPCB();  
-  int ReadTMBtCritFPGA();  
+  int ReadTMBtempPCB();
+  int ReadTMBtempFPGA();
+  int ReadTMBtCritPCB();
+  int ReadTMBtCritFPGA();
   int smb_io(int,int,int);
   //
   // TMB counters
@@ -631,7 +644,7 @@ public:
   void SetALCTController(ALCTController* a) {alctController_=a;}
   ALCTController * alctController() const {return alctController_;}
   RAT * getRAT() const {return rat_;}
-  //      
+  //
   int tmb_get_id(struct tmb_id_regs* tmb_id);
   int tmb_set_jtag_src(unsigned short int jtag_src);
   int tmb_get_jtag_src(unsigned short int* jtag_src);
@@ -645,7 +658,7 @@ public:
   int tmb_hard_reset_alct_fpga();
   int tmb_hard_reset_tmb_fpga();
   int tmb_enable_alct_hard_reset(int flag_enable);
-  int tmb_enable_vme_commands(int flag_enable);      
+  int tmb_enable_vme_commands(int flag_enable);
   //
   /// mostly for GUI
   friend std::ostream & operator<<(std::ostream & os, TMB & tmb);
@@ -680,7 +693,7 @@ public:
   // Functions to send sequence of commands to BPI command FIFO
   void otmb_bpi_prom_block_unlockerase(bool debug = false);
   void otmb_bpi_prom_loadaddress(unsigned short uaddress, unsigned short laddress, bool debug = true);
-  
+
   // Old OTMB BPI-->EPROM access rountines
   void otmbeprom_multi(int cnt, unsigned short *manbuf);
   bool otmbeprom_pec_ready(unsigned int poll_interval);
@@ -691,7 +704,7 @@ public:
   void otmb_readfirmware_mcs(const char *filename);
   void otmb_program_eprom(const char *mcsfile);
   bool otmb_program_eprom_poll(const char *mcsfile);
-  
+
   //
   ////////////////////////
   // The following methods deal with data going from TMB to MPC...
@@ -742,7 +755,7 @@ public:
   int  TriggerTestForceCLCTtriggerandReadout();
   void pause (std::string s);
   void stop (std::string s);
-  void lct_quality(int &ACC, int &A, int &C, int &A4, int &C4, int &P, int &CPAT, int &Q); 
+  void lct_quality(int &ACC, int &A, int &C, int &A4, int &C4, int &P, int &CPAT, int &Q);
   void decode_readout(int	vf_data[mxframe],int &dmb_wdcnt, bool &err_check);
   int vme_write(unsigned long &adr, unsigned short &wr_data);
   int vme_read(unsigned long &adr, unsigned short &rd_data);
@@ -756,12 +769,12 @@ public:
           int				 scp_playback,
           int				 scp_raw_data[512*160/16]
           ) ;
-  void pattern_finder 
+  void pattern_finder
       (
        // Inputs
-       int hs[6][160], 
-       int &csc_type, 
-       int &clct_sep, 
+       int hs[6][160],
+       int &csc_type,
+       int &clct_sep,
        int &adjcfeb_dist,
        int	&layer_trig_en,
        int	cfeb_en[5],
@@ -788,9 +801,9 @@ public:
   void pattern_unit (
           int ly0[], int ly1[], int ly2[], int ly3[], int ly4[], int ly5[], // Inputs
           int &pat_nhits, int &pat_id); // Outputs
-  
+
   //------------------------------------------------------------------------------
-  
+  //
   bool SelfTest() ;
   void init() ;
   //
@@ -802,7 +815,7 @@ public:
   //
   //
   //!device = 0 = TMB, = 1 = mezzanine, = 2 = RAT
-  std::bitset<64> dsnRead(int device); 
+  std::bitset<64> dsnRead(int device);
   //!Read on-board ADCs, then get functions to return values
   void ADCvoltages(float*);
   //
@@ -829,8 +842,21 @@ public:
   int tmb_read_delays(int);
   //
   inline int  GetCfebRxClockDelay(int CFEB) {
+    assert(CFEB < 5 || (CFEB < 7 && GetHardwareVersion() == 2));
+    
     int tmp[5] = { cfeb0_rx_clock_delay_, cfeb1_rx_clock_delay_, cfeb2_rx_clock_delay_, cfeb3_rx_clock_delay_, cfeb4_rx_clock_delay_ };
-    return tmp[CFEB]; 
+    if (CFEB < 5) return tmp[CFEB];
+    else if (CFEB == 5) return GetCfeb5RxClockDelay();
+    else return GetCfeb6RxClockDelay();
+  }
+  //
+  inline int  GetCfebRxPosNeg(int CFEB) {
+    assert(CFEB < 5 || (CFEB < 7 && GetHardwareVersion() == 2));
+    
+    int tmp[5] = { cfeb0_rx_posneg_, cfeb1_rx_posneg_, cfeb2_rx_posneg_, cfeb3_rx_posneg_, cfeb4_rx_posneg_};
+    if (CFEB < 5) return tmp[CFEB];
+    else if (CFEB == 5) return GetCfeb5RxPosNeg();
+    else return GetCfeb6RxPosNeg();
   }
   //
   //void SetVersion(std::string version) {version_ = version;}
@@ -855,12 +881,50 @@ public:
   //0X0E = ADR_LOOPBK:  Loop-Back Control Register:
   //----------------------------------------------------------------
   //!enable_alct_rx = [0,1] -> ALCT rx [off,on]
-  inline void SetAlctInput(int enable_alct_rx) { enable_alct_rx_ = enable_alct_rx; }        
+  inline void SetAlctInput(int enable_alct_rx) { enable_alct_rx_ = enable_alct_rx; }
   inline int  GetAlctInput() { return enable_alct_rx_;}
   //
   //!enable_alct_tx = [0,1] -> ALCT tx [off,on]
-  inline void SetEnableAlctTx(int enable_alct_tx) { enable_alct_tx_ = enable_alct_tx; } 
+  inline void SetEnableAlctTx(int enable_alct_tx) { enable_alct_tx_ = enable_alct_tx; }
   inline int  GetEnableAlctTx() { return enable_alct_tx_; }
+  //
+  //------------------------------------------------------------------
+  //0X14 = ADR_DDDSM:  3D3444 State Machine Control + DCM Lock Status
+  //------------------------------------------------------------------
+  inline void SetDDDStateMachineStart(int ddd_state_machine_start) {ddd_state_machine_start_ = ddd_state_machine_start;}
+  inline int  GetDDDStateMachineStart() {return ddd_state_machine_start_;}
+  inline int  GetReadDDDStateMachineStart() {return read_ddd_state_machine_start_;}
+
+  inline void SetDDDStateMachineManual(int ddd_state_machine_manual) {ddd_state_machine_manual_ = ddd_state_machine_manual;}
+  inline int  GetDDDStateMachineManual() {return ddd_state_machine_manual_;}
+  inline int  GetReadDDDStateMachineManual() {return read_ddd_state_machine_manual_;}
+
+  inline void SetDDDStateMachineLatch(int ddd_state_machine_latch) {ddd_state_machine_latch_ = ddd_state_machine_latch;}
+  inline int  GetDDDStateMachineLatch() {return ddd_state_machine_latch_;}
+  inline int  GetReadDDDStateMachineLatch() {return read_ddd_state_machine_latch_;}
+
+  inline void SetDDDStateMachineSerialIn(int ddd_state_machine_serial_in) {ddd_state_machine_serial_in_ = ddd_state_machine_serial_in;}
+  inline int  GetDDDStateMachineSerialIn() {return ddd_state_machine_serial_in_;}
+  inline int  GetReadDDDStateMachineSerialIn() {return read_ddd_state_machine_serial_in_;}
+
+  inline void SetDDDStateMachineSerialOut(int ddd_state_machine_serial_out) {ddd_state_machine_serial_out_ = ddd_state_machine_serial_out;}
+  inline int  GetDDDStateMachineSerialOut() {return ddd_state_machine_serial_out_;}
+  inline int  GetReadDDDStateMachineSerialOut() {return read_ddd_state_machine_serial_out_;}
+
+  inline void SetDDDStateMachineAutostart(int ddd_state_machine_autostart) {ddd_state_machine_autostart_ = ddd_state_machine_autostart;}
+  inline int  GetDDDStateMachineAutostart() {return ddd_state_machine_autostart_;}
+  inline int  GetReadDDDStateMachineAutostart() {return read_ddd_state_machine_autostart_;}
+
+  inline int  GetReadDDDStateMachineBusy() {return read_ddd_state_machine_busy_;}
+  inline int  GetReadDDDStateMachineVerifyOk() {return read_ddd_state_machine_verify_ok_;}
+  inline int  GetReadDDDStateMachineClock0Lock() {return read_ddd_state_machine_clock0_lock_;}
+  inline int  GetReadDDDStateMachineClock0dLock() {return read_ddd_state_machine_clock0d_lock_;}
+  inline int  GetReadDDDStateMachineClock1Lock() {return read_ddd_state_machine_clock1_lock_;}
+  inline int  GetReadDDDStateMachineClockALCTLock() {return read_ddd_state_machine_clock_alct_lock_;}
+  inline int  GetReadDDDStateMachineClockdALCTLock() {return read_ddd_state_machine_clockd_alct_lock_;}
+  inline int  GetReadDDDStateMachineClockCFEBLock() {return read_ddd_state_machine_clock_cfeb_lock_;}
+  inline int  GetReadDDDStateMachineClockDCCLock() {return read_ddd_state_machine_clock_dcc_lock_;}
+  inline int  GetReadDDDStateMachineClockRPCLock() {return read_ddd_state_machine_clock_rpc_lock_;}
   //
   //------------------------------------------------------------------
   //0X16 = ADR_DDD0:  3D3444 Chip 0 Delays, 1 step = 2ns
@@ -1073,15 +1137,15 @@ public:
   //0X32 = ADR_ALCT_INJ:  ALCT Injector Control:
   //----------------------------------------------------------------
   //!alct_clear = [0,1] -> [do not blank,blank] ALCT received data
-  inline void SetAlctClear(int alct_clear) { alct_clear_ = alct_clear; }                    
+  inline void SetAlctClear(int alct_clear) { alct_clear_ = alct_clear; }
   inline int  GetAlctClear() { return alct_clear_; }
   //
   //!alct_inject_mux = 1 = start ALCT injector state machine
-  inline void SetAlctInject(int alct_inject_mux) { alct_inject_mux_ = alct_inject_mux; }              
+  inline void SetAlctInject(int alct_inject_mux) { alct_inject_mux_ = alct_inject_mux; }
   inline int  GetAlctInject() { return alct_inject_mux_; }
   //
   //!alct_sync_clct = 1 = link ALCT injector with CLCT inject command
-  inline void SetSyncAlctInjectToClctInject(int alct_sync_clct) { alct_sync_clct_ = alct_sync_clct; } 
+  inline void SetSyncAlctInjectToClctInject(int alct_sync_clct) { alct_sync_clct_ = alct_sync_clct; }
   inline int  GetSyncAlctInjectToClctInject() { return alct_sync_clct_; }
   //
   inline void SetAlctInjectorDelay(int alct_inj_delay) { alct_inj_delay_ = alct_inj_delay; }
@@ -1178,20 +1242,39 @@ public:
   //0X42 = ADR_CFEB_INJ:  CFEB Injector Control:
   //----------------------------------------------------------------
   //!enableCLCTInputs = [0-31]... 5 bit mask, 1 bit per CFEB -> each bit [0,1] = [disable,enable] CFEB input
-  inline void SetEnableCLCTInputs(int enableCLCTInputs) { enableCLCTInputs_ = enableCLCTInputs; } 
+  //!7 bits for OTMB from 0X17A = ADR_V6_EXTEND
+  inline void SetEnableCLCTInputs(int enableCLCTInputs) { enableCLCTInputs_ = enableCLCTInputs; }
   inline int  GetEnableCLCTInputs() { return enableCLCTInputs_; }
+  inline int  GetReadEnableCLCTInputs() { 
+    int val = ( read_enableCLCTInputs_ & 0x1f);
+    if (GetHardwareVersion()>= 2) val |= ((read_enableCLCTInputs_extend_ & 0x3) <<5);
+    return val;
+  }
   //
   //!cfeb_ram_sel = [0-31]... 5 bit mask, 1 bit per CFEB -> each bit [0,1] = [do not select,select] CFEB for RAM read/write
-  inline void SetSelectCLCTRAM(int cfeb_ram_sel) { cfeb_ram_sel_ = cfeb_ram_sel; }        
+  //! 7 bits for OTMB
+  inline void SetSelectCLCTRAM(int cfeb_ram_sel) { cfeb_ram_sel_ = cfeb_ram_sel; }
   inline int  GetSelectCLCTRAM() { return cfeb_ram_sel_; }
+  inline int  GetReadSelectCLCTRAM() { 
+    int val = ( read_cfeb_ram_sel_ & 0x1f );
+    if (GetHardwareVersion()>= 2) val |= ((read_cfeb_ram_sel_extend_ & 0x3) << 5 );
+    return val;
+  }
   //
   //!cfeb_inj_en_sel = [0-31]... 5 bit mask, 1 bit per CFEB -> each bit [0,1] = [disable,enable] CFEB for injector trigger
-  inline void SetEnableCLCTInject(int cfeb_inj_en_sel) { cfeb_inj_en_sel_ = cfeb_inj_en_sel; }  
+  //! 7 bits for OTMB
+  inline void SetEnableCLCTInject(int cfeb_inj_en_sel) { cfeb_inj_en_sel_ = cfeb_inj_en_sel; }
   inline int  GetEnableCLCTInject() { return cfeb_inj_en_sel_; }
+  inline int  GetReadEnableCLCTInject() { 
+    int val = ( read_cfeb_inj_en_sel_ & 0x1f);
+    if (GetHardwareVersion()>= 2) val |= ((read_cfeb_inj_en_sel_extend_ & 0x3) << 5 );
+    return val;
+  }
   //
   //!start_pattern_inj = 1 = start pattern injector
-  inline void SetStartPatternInjector(int start_pattern_inj) { start_pattern_inj_ = start_pattern_inj; } 
+  inline void SetStartPatternInjector(int start_pattern_inj) { start_pattern_inj_ = start_pattern_inj; }
   inline int  GetStartPatternInjector() { return start_pattern_inj_; }
+  inline int  GetReadStartPatternInjector() { return read_start_pattern_inj_; }
   //
   //------------------------------------------------------------------
   //0X4A,4C,4E = ADR_HCM001,HCM023,HCM045 = CFEB0 Hot Channel Masks
@@ -1199,9 +1282,11 @@ public:
   //0X56,58,5A = ADR_HCM201,HCM223,HCM245 = CFEB2 Hot Channel Masks
   //0X5C,5E,60 = ADR_HCM301,HCM323,HCM345 = CFEB3 Hot Channel Masks
   //0X62,64,66 = ADR_HCM401,HCM423,HCM445 = CFEB4 Hot Channel Masks
+  //0x16E,170,172 = ADR_HCM401,HCM423,HCM445 = CFEB5 Hot Channel Masks  --- added on OTMB
+  //0x174,176,178 = ADR_HCM401,HCM423,HCM445 = CFEB6 Hot Channel Masks  --- added on OTMB
   //------------------------------------------------------------------
-  //!layer=[0-5], distrip=[0-39], on_or_off = 0 = disable
-  inline void SetDistripHotChannelMask(int layer,int distrip,int on_or_off) { hot_channel_mask_[layer][distrip] = on_or_off; } 
+  //!layer=[0-5], distrip=[0-55], on_or_off = 0 = disable
+  inline void SetDistripHotChannelMask(int layer,int distrip,int on_or_off) { hot_channel_mask_[layer][distrip] = on_or_off; }
   inline int  GetDistripHotChannelMask(int layer,int distrip) { return hot_channel_mask_[layer][distrip]; }
   //
   //!layer=[0-5], mask=10 hex-characters for the 40 distrips right->left LSB->MSB.  So, to mask off channel 0, mask= fffffffffe
@@ -1261,7 +1346,7 @@ public:
   inline int  GetCfebEnable() { return cfebs_enabled_; }
   //
   //! value = 42, 68 = VME register which controls the CFEB mask.  See TMB documentation before setting this value.
-  void Set_cfeb_enable_source(int value); 
+  void Set_cfeb_enable_source(int value);
   // this is the user interface to SetCfebEnableSource_(int cfeb_enable_source)...
   //
   inline int  GetCfebEnableSource() { return cfeb_enable_source_; }
@@ -1279,7 +1364,7 @@ public:
   //
   //!alct_pretrig_delay = [0-15] = ALCT delay for use in ALCT*CLCT pretrigger (bx)
   inline void SetAlctPretrigDelay(int alct_pretrig_delay) { alct_pretrig_delay_ = alct_pretrig_delay; }
-  inline int  GetAlctPretrigDelay() { return alct_pretrig_delay_; }  
+  inline int  GetAlctPretrigDelay() { return alct_pretrig_delay_; }
   //
   //!alct_pattern_delay = [0-15] = delay active FEB flag from ALCT (bx)
   inline void SetAlctPatternDelay(int alct_pattern_delay) { alct_pattern_delay_ = alct_pattern_delay; }
@@ -1331,9 +1416,9 @@ public:
   inline int  GetReadHsPretrigThresh() { return read_hit_thresh_; }
   //
   //!aff_thresh = [0-6] = minimum number of hits needed on CLCT pretrigger pattern to send Active FEB Flag to DMB
-  inline void SetActiveFebFlagThresh(int aff_thresh) { aff_thresh_ = aff_thresh; } 
-  inline int  GetActiveFebFlagThresh() { return aff_thresh_; } 
-  inline int  GetReadActiveFebFlagThresh() { return read_aff_thresh_; } 
+  inline void SetActiveFebFlagThresh(int aff_thresh) { aff_thresh_ = aff_thresh; }
+  inline int  GetActiveFebFlagThresh() { return aff_thresh_; }
+  inline int  GetReadActiveFebFlagThresh() { return read_aff_thresh_; }
   //
   //!min_hits_pattern = minimum number of layers needed to match for pattern trigger
   inline void SetMinHitsPattern(int min_hits_pattern){ min_hits_pattern_ = min_hits_pattern; }
@@ -1581,19 +1666,19 @@ public:
   //0XB6 = ADR_RPC_CFG:  RPC Configuration:
   //-----------------------------------------------------------------
   //!rpc_exists = [0-15]... 4 bit mask, 1 bit per RPC -> each bit [0,1] = RPC [does not,does] exist
-  inline void SetRpcExist(int rpc_exists) { rpc_exists_ = rpc_exists; }  
+  inline void SetRpcExist(int rpc_exists) { rpc_exists_ = rpc_exists; }
   inline int  GetRpcExist() { return rpc_exists_; }
   //
   //!rpc_read_enable = 1 = include existing RPCs in DMB readout
-  inline void SetRpcReadEnable(int rpc_read_enable) { rpc_read_enable_ = rpc_read_enable; } 
+  inline void SetRpcReadEnable(int rpc_read_enable) { rpc_read_enable_ = rpc_read_enable; }
   inline int  GetRpcReadEnable() { return rpc_read_enable_; }
   //
   //!rpc_bxn_offset = [0-15]
-  inline void SetRpcBxnOffset(int rpc_bxn_offset) { rpc_bxn_offset_ = rpc_bxn_offset; } 
+  inline void SetRpcBxnOffset(int rpc_bxn_offset) { rpc_bxn_offset_ = rpc_bxn_offset; }
   inline int  GetRpcBxnOffset() { return rpc_bxn_offset_; }
   //
   //!rpc_bank = [0-3] -> RPC bank address, for reading rdata sync mode
-  inline void SetRpcSyncBankAddress(int rpc_bank) { rpc_bank_ = rpc_bank; } 
+  inline void SetRpcSyncBankAddress(int rpc_bank) { rpc_bank_ = rpc_bank; }
   inline int  GetRpcSyncBankAddress() { return rpc_bank_; }
   //
   //------------------------------------------------------------------
@@ -1621,7 +1706,7 @@ public:
   //0XBC = ADR_RPC_INJ:  RPC Injector Control
   //------------------------------------------------------------------
   //!rpc_mask_all = [1,0] -> All RPC inputs [on,off]
-  inline void SetEnableRpcInput(int rpc_mask_all) { rpc_mask_all_ = rpc_mask_all; }   
+  inline void SetEnableRpcInput(int rpc_mask_all) { rpc_mask_all_ = rpc_mask_all; }
   inline int  GetEnableRpcInput() { return rpc_mask_all_; }
   //
   //!inj_mask_rat = 1 = enable RAT for injector fire
@@ -1681,55 +1766,55 @@ public:
   //0XCC = ADR_NON_TRIG_RO:  Non-Triggering Event Enables + ME1/1A(1B) reversal 
   //-----------------------------------------------------------------------------
   //!tmb_allow_alct_nontrig_readout = 1/0 = do/don't allow ALCT-only non-triggering readout
-  inline void SetAllowAlctNontrigReadout(int tmb_allow_alct_nontrig_readout) { tmb_allow_alct_nontrig_readout_ = tmb_allow_alct_nontrig_readout; } 
-  inline int  GetAllowAlctNontrigReadout() { return tmb_allow_alct_nontrig_readout_; } 
-  inline int  GetReadAllowAlctNontrigReadout() { return read_tmb_allow_alct_nontrig_readout_; } 
+  inline void SetAllowAlctNontrigReadout(int tmb_allow_alct_nontrig_readout) { tmb_allow_alct_nontrig_readout_ = tmb_allow_alct_nontrig_readout; }
+  inline int  GetAllowAlctNontrigReadout() { return tmb_allow_alct_nontrig_readout_; }
+  inline int  GetReadAllowAlctNontrigReadout() { return read_tmb_allow_alct_nontrig_readout_; }
   //
   //!tmb_allow_clct_nontrig_readout = 1/0 = do/don't allow CLCT-only non-triggering readout
-  inline void SetAllowClctNontrigReadout(int tmb_allow_clct_nontrig_readout) { tmb_allow_clct_nontrig_readout_ = tmb_allow_clct_nontrig_readout; } 
-  inline int  GetAllowClctNontrigReadout() { return tmb_allow_clct_nontrig_readout_; } 
-  inline int  GetReadAllowClctNontrigReadout() { return read_tmb_allow_clct_nontrig_readout_; } 
+  inline void SetAllowClctNontrigReadout(int tmb_allow_clct_nontrig_readout) { tmb_allow_clct_nontrig_readout_ = tmb_allow_clct_nontrig_readout; }
+  inline int  GetAllowClctNontrigReadout() { return tmb_allow_clct_nontrig_readout_; }
+  inline int  GetReadAllowClctNontrigReadout() { return read_tmb_allow_clct_nontrig_readout_; }
   //
   //!tmb_allow_match_nontrig_readout = 1/0 = do/don't allow ALCT*CLCT non-triggering readout
-  inline void SetAllowMatchNontrigReadout(int tmb_allow_match_nontrig_readout) { tmb_allow_match_nontrig_readout_ = tmb_allow_match_nontrig_readout; } 
-  inline int  GetAllowMatchNontrigReadout() { return tmb_allow_match_nontrig_readout_; } 
-  inline int  GetReadAllowMatchNontrigReadout() { return read_tmb_allow_match_nontrig_readout_; } 
+  inline void SetAllowMatchNontrigReadout(int tmb_allow_match_nontrig_readout) { tmb_allow_match_nontrig_readout_ = tmb_allow_match_nontrig_readout; }
+  inline int  GetAllowMatchNontrigReadout() { return tmb_allow_match_nontrig_readout_; }
+  inline int  GetReadAllowMatchNontrigReadout() { return read_tmb_allow_match_nontrig_readout_; }
   //
   //!mpc_block_me1a = 1/0 = do/don't block ME1A LCT's from going to MPC (still queue data for readout)
-  inline void SetBlockME1aToMPC(int mpc_block_me1a) { mpc_block_me1a_ = mpc_block_me1a; } 
-  inline int  GetBlockME1aToMPC() { return mpc_block_me1a_; } 
-  inline int  GetReadBlockME1aToMPC() { return read_mpc_block_me1a_; } 
+  inline void SetBlockME1aToMPC(int mpc_block_me1a) { mpc_block_me1a_ = mpc_block_me1a; }
+  inline int  GetBlockME1aToMPC() { return mpc_block_me1a_; }
+  inline int  GetReadBlockME1aToMPC() { return read_mpc_block_me1a_; }
   //
   //!clct_pretrigger_counter_non_me11 = 1/0 = do/don't allow CLCT pretrigger Counters 6 and 7 to count non-ME1A/B.  If 1-> they should equal counter 5
-  inline void SetClctPretriggerCounterME11(int clct_pretrigger_counter_non_me11) { clct_pretrigger_counter_non_me11_ = clct_pretrigger_counter_non_me11; } 
-  inline int  GetClctPretriggerCounterME11() { return clct_pretrigger_counter_non_me11_; } 
-  inline int  GetReadClctPretriggerCounterME11() { return read_clct_pretrigger_counter_non_me11_; } 
+  inline void SetClctPretriggerCounterME11(int clct_pretrigger_counter_non_me11) { clct_pretrigger_counter_non_me11_ = clct_pretrigger_counter_non_me11; }
+  inline int  GetClctPretriggerCounterME11() { return clct_pretrigger_counter_non_me11_; }
+  inline int  GetReadClctPretriggerCounterME11() { return read_clct_pretrigger_counter_non_me11_; }
   //
   //!csc_me11 = 1/0 = TMB firmware compile type is/isn't for ME1/1 (setting based on tmb_firmware_compile_type)
-  inline int  GetCSCME11() { return csc_me11_; } 
-  inline int  GetReadCSCME11() { return read_csc_me11_; } 
+  inline int  GetCSCME11() { return csc_me11_; }
+  inline int  GetReadCSCME11() { return read_csc_me11_; }
   //
   //!clct_stagger = 1/0 = do/don't stagger strip layers (setting based on tmb_firmware_compile_type)
-  inline int  GetClctStagger() { return clct_stagger_; } 
-  inline int  GetReadClctStagger() { return read_clct_stagger_; } 
+  inline int  GetClctStagger() { return clct_stagger_; }
+  inline int  GetReadClctStagger() { return read_clct_stagger_; }
   //
   //!reverse_stagger = 1/0 = do/don't reverse and stagger strips (setting based on tmb_firmware_compile_type)
-  inline int  GetReverseStagger() { return reverse_stagger_; } 
-  inline int  GetReadReverseStagger() { return read_reverse_stagger_; } 
+  inline int  GetReverseStagger() { return reverse_stagger_; }
+  inline int  GetReadReverseStagger() { return read_reverse_stagger_; }
   //
   //!reverse_me1a = 1/0 = do/don't reverse me1a 1/2-strips (setting based on tmb_firmware_compile_type)
-  inline int  GetReverseME1a() { return reverse_me1a_; } 
-  inline int  GetReadReverseME1a() { return read_reverse_me1a_; } 
+  inline int  GetReverseME1a() { return reverse_me1a_; }
+  inline int  GetReadReverseME1a() { return read_reverse_me1a_; }
   //
   //!reverse_me1b = 1/0 = do/don't reverse me1b 1/2-strips (setting based on tmb_firmware_compile_type)
-  inline int  GetReverseMe1b() { return reverse_me1b_; } 
-  inline int  GetReadReverseMe1b() { return read_reverse_me1b_; } 
+  inline int  GetReverseMe1b() { return reverse_me1b_; }
+  inline int  GetReadReverseMe1b() { return read_reverse_me1b_; }
   //
   // Although the following are read-only bits, we set it in the xml file to define what TMB firmware type to expect...
   // The software Setters and Getters do not necessarily correspond to the actual bits which are read from address 0xCC.  
   //!tmb_firmware_compile_type = 0xa,0xb,0xc,0xd = type of firmware specifying the 1/2-strip ordering and ME1/1 CFEB arrangement.
-  void SetTMBFirmwareCompileType(int tmb_firmware_compile_type);  
-  inline int GetTMBFirmwareCompileType() { return tmb_firmware_compile_type_; } 
+  void SetTMBFirmwareCompileType(int tmb_firmware_compile_type);
+  inline int GetTMBFirmwareCompileType() { return tmb_firmware_compile_type_; }
   inline int GetReadTMBFirmwareCompileType() { return read_tmb_firmware_compile_type_; }
   //
   //------------------------------------------------------------------
@@ -1753,9 +1838,9 @@ public:
   //0XF0 = ADR_LAYER_TRIG:  Layer-Trigger Mode
   //---------------------------------------------------------------------
   //!layer_trigger_en = 1 = enable layer trigger mode
-  inline void SetEnableLayerTrigger(int layer_trigger_en) { layer_trigger_en_ = layer_trigger_en; } 
-  inline int  GetEnableLayerTrigger() { return layer_trigger_en_; } 
-  inline int  GetReadEnableLayerTrigger() { return read_layer_trigger_en_; } 
+  inline void SetEnableLayerTrigger(int layer_trigger_en) { layer_trigger_en_ = layer_trigger_en; }
+  inline int  GetEnableLayerTrigger() { return layer_trigger_en_; }
+  inline int  GetReadEnableLayerTrigger() { return read_layer_trigger_en_; }
   //
   //!layer_trig_thresh = [0-6] = number of layers required for layer trigger
   inline void SetLayerTriggerThreshold(int layer_trig_thresh) { layer_trig_thresh_ = layer_trig_thresh; }
@@ -1769,33 +1854,33 @@ public:
   //0XF4 = ADR_TEMP0:  Pattern finder Pretrigger
   //---------------------------------------------------------------------
   //!clct_blanking = 1 = blank CLCT output if no valid pattern flag
-  inline void SetClctBlanking(int clct_blanking) { clct_blanking_ = clct_blanking; } 
-  inline int  GetClctBlanking() { return clct_blanking_; } 
-  inline int  GetReadClctBlanking() { return read_clct_blanking_; } 
+  inline void SetClctBlanking(int clct_blanking) { clct_blanking_ = clct_blanking; }
+  inline int  GetClctBlanking() { return clct_blanking_; }
+  inline int  GetReadClctBlanking() { return read_clct_blanking_; }
   //
   //!clct_pattern_id_thresh = [0-8] = minimum pattern ID value for CLCT pretrigger
-  inline void SetClctPatternIdThresh(int clct_pattern_id_thresh) { clct_pattern_id_thresh_ = clct_pattern_id_thresh; } 
-  inline int  GetClctPatternIdThresh() { return clct_pattern_id_thresh_; } 
-  inline int  GetReadClctPatternIdThresh() { return read_clct_pattern_id_thresh_; } 
+  inline void SetClctPatternIdThresh(int clct_pattern_id_thresh) { clct_pattern_id_thresh_ = clct_pattern_id_thresh; }
+  inline int  GetClctPatternIdThresh() { return clct_pattern_id_thresh_; }
+  inline int  GetReadClctPatternIdThresh() { return read_clct_pattern_id_thresh_; }
   //
   //!clct_pattern_id_thresh_postdrift = [0-8] = minimum pattern ID value for CLCT post drift-delay
-  inline void SetClctPatternIdThreshPostDrift(int clct_pattern_id_thresh_postdrift) { clct_pattern_id_thresh_postdrift_ = clct_pattern_id_thresh_postdrift; } 
-  inline int  GetClctPatternIdThreshPostDrift() { return clct_pattern_id_thresh_postdrift_; } 
-  inline int  GetReadClctPatternIdThreshPostDrift() { return read_clct_pattern_id_thresh_postdrift_; } 
+  inline void SetClctPatternIdThreshPostDrift(int clct_pattern_id_thresh_postdrift) { clct_pattern_id_thresh_postdrift_ = clct_pattern_id_thresh_postdrift; }
+  inline int  GetClctPatternIdThreshPostDrift() { return clct_pattern_id_thresh_postdrift_; }
+  inline int  GetReadClctPatternIdThreshPostDrift() { return read_clct_pattern_id_thresh_postdrift_; }
   //
   //!adjacent_cfeb_distance = [0-31] = Distance from key on CFEBn to CFEBn+1 to set Active FEB Flag on CFEBn+1 for DMB
   //... setting to 5 enables hs0,1,2,3,4 and hs31,30,29,28,27
-  inline void SetAdjacentCfebDistance(int adjacent_cfeb_distance) { adjacent_cfeb_distance_ = adjacent_cfeb_distance; } 
-  inline int  GetAdjacentCfebDistance() { return adjacent_cfeb_distance_; } 
-  inline int  GetReadAdjacentCfebDistance() { return read_adjacent_cfeb_distance_; } 
+  inline void SetAdjacentCfebDistance(int adjacent_cfeb_distance) { adjacent_cfeb_distance_ = adjacent_cfeb_distance; }
+  inline int  GetAdjacentCfebDistance() { return adjacent_cfeb_distance_; }
+  inline int  GetReadAdjacentCfebDistance() { return read_adjacent_cfeb_distance_; }
   //
   //---------------------------------------------------------------------
   //0XF6 = ADR_TEMP1:  CLCT separation
   //---------------------------------------------------------------------
   //!min_clct_separation = [0-255] = minimum 1/2-strip separation between two CLCTs
-  inline void SetMinClctSeparation(int min_clct_separation) { min_clct_separation_ = min_clct_separation; } 
-  inline int  GetMinClctSeparation() { return min_clct_separation_; } 
-  inline int  GetReadMinClctSeparation() { return read_min_clct_separation_; } 
+  inline void SetMinClctSeparation(int min_clct_separation) { min_clct_separation_ = min_clct_separation; }
+  inline int  GetMinClctSeparation() { return min_clct_separation_; }
+  inline int  GetReadMinClctSeparation() { return read_min_clct_separation_; }
   //
   //---------------------------------------------------------------------
   //0XFC = ADR_CCB_STAT1:  CCB Status Register (cont. from 0x2E)
@@ -1992,7 +2077,7 @@ public:
   //---------------------------------------------------------------------
   //0X11A = ADR_PHASER6 digital phase shifter setting for cfeb4_rx
   //---------------------------------------------------------------------
-  inline void SetCfeb4RxClockDelay(int cfeb4_rx_clock_delay) { cfeb4_rx_clock_delay_ = cfeb4_rx_clock_delay; }  
+  inline void SetCfeb4RxClockDelay(int cfeb4_rx_clock_delay) { cfeb4_rx_clock_delay_ = cfeb4_rx_clock_delay; }
   inline void SetCFEB4delay(int cfeb4_rx_clock_delay)        { cfeb4_rx_clock_delay_ = cfeb4_rx_clock_delay; } //legacy setter
   inline int  GetCfeb4RxClockDelay() { return cfeb4_rx_clock_delay_; }
   inline int  GetCFEB4delay()        { return cfeb4_rx_clock_delay_; } //legacy getter
@@ -2151,7 +2236,7 @@ public:
 	inline void SetMPCFramesFifoCtrlWrEn(int mpc_frames_fifo_ctrl_wr_en) { mpc_frames_fifo_ctrl_wr_en_ = mpc_frames_fifo_ctrl_wr_en; }
 	inline int  GetMPCFramesFifoCtrlWrEn() { return mpc_frames_fifo_ctrl_wr_en_; }
 	inline int  GetReadMPCFramesFifoCtrlWrEn() { return read_mpc_frames_fifo_ctrl_wr_en_; }
-	
+
 	inline void SetMPCFramesFifoCtrlRdEn(int mpc_frames_fifo_ctrl_rd_en) { mpc_frames_fifo_ctrl_rd_en_ = mpc_frames_fifo_ctrl_rd_en; }
 	inline int  GetMPCFramesFifoCtrlRdEn() { return mpc_frames_fifo_ctrl_rd_en_; }
 	inline int  GetReadMPCFramesFifoCtrlRdEn() { return read_mpc_frames_fifo_ctrl_rd_en_; }
@@ -2159,7 +2244,7 @@ public:
   // **********************************************************************************
   //
   //!Return the software value to be written into the register at "address", whose values have been set by the "Set...(int data)" methods
-  int  FillTMBRegister(unsigned long int address); 
+  int  FillTMBRegister(unsigned long int address);
   //
   void UnjamFPGA();
   //
@@ -2185,12 +2270,12 @@ public:
   inline bool GetTMBFillVmeWriteVecs() { return tmb_fill_write_vme_vectors_; }
   //
   // access to vectors of information to go into the userPROM
-  inline std::vector<int> GetTMBVecVmeAddress() { return tmb_write_vme_address_; }   
-  inline std::vector<int> GetTMBVecDataLsb() { return tmb_write_data_lsb_; }         
-  inline std::vector<int> GetTMBVecDataMsb() { return tmb_write_data_msb_; }         
+  inline std::vector<int> GetTMBVecVmeAddress() { return tmb_write_vme_address_; }
+  inline std::vector<int> GetTMBVecDataLsb() { return tmb_write_data_lsb_; }
+  inline std::vector<int> GetTMBVecDataMsb() { return tmb_write_data_msb_; }
   //
   // clear vectors of information to go into the userPROM
-  void ClearTMBVmeWriteVecs();                            
+  void ClearTMBVmeWriteVecs();
   //
   //---------------------------------------------------------------------
   // The following would be better out of VMEController... 
@@ -2209,7 +2294,7 @@ public:
   std::vector<int> GetALCTVecDataMsb();
   //
   // clear vectors of information to go into the userPROM
-  void ClearALCTVmeWriteVecs();                            
+  void ClearALCTVmeWriteVecs();
   //---------------------------------------------------------------------
   //
   //-- read groups of TMB registers --//
@@ -2230,9 +2315,9 @@ public:
   void PrintRawHitsHeader();
   void PrintDDDStateMachine();
   //
-  void PrintTMBRegister(unsigned long int address);  
-  void PrintFirmwareDate();                          
-  void PrintBootRegister();                          
+  void PrintTMBRegister(unsigned long int address);
+  void PrintFirmwareDate();
+  void PrintBootRegister();
   //
   //
   //-- compare read values with expected values --//
@@ -2302,7 +2387,7 @@ private:
   // ALCTs need to go to lower scan level, whatever that means
   void start(int,int jtagSource=jtagSourceBoot);
   // does start(1)
-  void tmb_vme(char fcn, char vme, const char *snd,char *rcv, int wrt);      
+  void tmb_vme(char fcn, char vme, const char *snd,char *rcv, int wrt);
   void tmb_vme_new(char fcn, unsigned vme, unsigned short data, char *rcv, int when);
 
   bool debug_;
@@ -2310,12 +2395,12 @@ private:
   int number_of_configuration_reads_;
   //
   // on-board voltages and currents
-  float v5p0_     ;	      
+  float v5p0_     ;
   float v3p3_     ;
   float v1p5core_ ;
   float v1p5tt_   ;
   float v1p0_	;
-  float a5p0_	;	      
+  float a5p0_	;
   float a3p3_	;
   float a1p5core_ ;
   float a1p5tt_   ;
@@ -2355,11 +2440,11 @@ private:
   int ecc_trigger_path_one_error_counter_index_;
   int ecc_trigger_path_two_errors_counter_index_;
   int ecc_trigger_path_more_than_two_errors_counter_index_;
-  int alct_raw_hits_readout_counter_index_;  
+  int alct_raw_hits_readout_counter_index_;
   int clct_pretrigger_counter_index_;
-  int lct_sent_to_mpc_counter_index_; 
+  int lct_sent_to_mpc_counter_index_;
   int lct_accepted_by_mpc_counter_index_;
-  int l1a_in_tmb_window_counter_index_; 
+  int l1a_in_tmb_window_counter_index_;
   //
   //
   //-- TMB and ALCT data in raw hits VME readout --//
@@ -2421,7 +2506,7 @@ private:
   //settings which are combinations of registers
   //-----------------------------------------------------------------
   void SetTrgmode_();                  //define TMB registers which are combinations of the database value "trgmode_"
-  int trgmode_;     
+  int trgmode_;
   //
   int read_trgmode_;
   //
@@ -2616,19 +2701,19 @@ private:
   //------------------------------------------------------------------
   //0X30 = ADR_ALCT_CFG:  ALCT Configuration
   //------------------------------------------------------------------
-  int cfg_alct_ext_trig_en_;  
+  int cfg_alct_ext_trig_en_;
   int cfg_alct_ext_inject_en_;
-  int cfg_alct_ext_trig_;    
-  int cfg_alct_ext_inject_;  
-  int alct_seq_cmd_;         
+  int cfg_alct_ext_trig_;
+  int cfg_alct_ext_inject_;
+  int alct_seq_cmd_;
   int alct_clock_en_use_ccb_;
   int alct_clock_en_use_vme_;
   //
-  int read_cfg_alct_ext_trig_en_;  
+  int read_cfg_alct_ext_trig_en_;
   int read_cfg_alct_ext_inject_en_;
-  int read_cfg_alct_ext_trig_;    
-  int read_cfg_alct_ext_inject_;  
-  int read_alct_seq_cmd_;         
+  int read_cfg_alct_ext_trig_;
+  int read_cfg_alct_ext_inject_;
+  int read_alct_seq_cmd_;
   int read_alct_clock_en_use_ccb_;
   int read_alct_clock_en_use_vme_;
   int read_alct_muonic_;
@@ -2999,12 +3084,12 @@ private:
   //------------------------------------------------------------------
   //0XAE = ADR_SEQSM:  Sequencer Machine State
   //------------------------------------------------------------------
-  int read_clct_state_machine_;      
-  int read_readout_state_machine_;   
-  int read_buffer_queue_full_;      
-  int read_buffer_queue_empty_;    
-  int read_buffer_queue_overflow_;  
-  int read_buffer_queue_underflow_; 
+  int read_clct_state_machine_;
+  int read_readout_state_machine_;
+  int read_buffer_queue_full_;
+  int read_buffer_queue_empty_;
+  int read_buffer_queue_overflow_;
+  int read_buffer_queue_underflow_;
   //
   //------------------------------------------------------------------
   //0XB0 = ADR_SEQCLCTM:  Sequencer CLCT (Most significant bits)
@@ -3157,23 +3242,23 @@ private:
   //------------------------------------------------------------------
   int vme_state_machine_start_;
   int vme_state_machine_sreset_;
-  int vme_state_machine_jtag_auto_; 
+  int vme_state_machine_jtag_auto_;
   int phase_shifter_auto_;
-  int vme_state_machine_throttle_; 
+  int vme_state_machine_throttle_;
   //
   int read_vme_state_machine_start_;
   int read_vme_state_machine_sreset_;
-  int read_vme_state_machine_autostart_; 
+  int read_vme_state_machine_autostart_;
   int read_vme_state_machine_busy_;
   int read_vme_state_machine_aborted_;
   int read_vme_state_machine_cksum_ok_;
-  int read_vme_state_machine_wdcnt_ok_; 
-  int read_vme_state_machine_jtag_auto_; 
-  int read_vme_state_machine_vme_ready_; 
+  int read_vme_state_machine_wdcnt_ok_;
+  int read_vme_state_machine_jtag_auto_;
+  int read_vme_state_machine_vme_ready_;
   int read_vme_state_machine_ok_;
-  int read_vme_state_machine_path_ok_; 
+  int read_vme_state_machine_path_ok_;
   int read_phase_shifter_auto_;
-  int read_vme_state_machine_throttle_; 
+  int read_vme_state_machine_throttle_;
   //
   //------------------------------------------------------------------
   //0XDC = ADR_VMESM1:  VME State Machine Word Count
@@ -3329,21 +3414,21 @@ private:
   //[0X10E-0X11A] = ADR_PHASER[0-6]:  parameters common to the digital phase shifters
   //----------------------------------------------------------------------------------------
   int fire_phaser_                  ;
-  int reset_phase_                  ; 
+  int reset_phase_                  ;
   int phaser_posneg_                ;
-  int phase_value_within_quadrant_  ; 
-  int quarter_cycle_quadrant_select_; 
-  int half_cycle_quadrant_select_   ; 
+  int phase_value_within_quadrant_  ;
+  int quarter_cycle_quadrant_select_;
+  int half_cycle_quadrant_select_   ;
   //
   int read_fire_phaser_                  ;
-  int read_reset_phase_                  ; 
+  int read_reset_phase_                  ;
   int read_phaser_busy_                  ;
   int read_digital_clock_manager_locked_ ;
   int read_phase_shifter_state_          ;
   int read_phaser_posneg_                ;
-  int read_phase_value_within_quadrant_  ; 
-  int read_quarter_cycle_quadrant_select_; 
-  int read_half_cycle_quadrant_select_   ; 
+  int read_phase_value_within_quadrant_  ;
+  int read_quarter_cycle_quadrant_select_;
+  int read_half_cycle_quadrant_select_   ;
   //
   //--------------------------------------------------------------
   //[0X10E] = ADR_PHASER0:  values in the xml file for alct_rx
@@ -3429,17 +3514,17 @@ private:
   int cfeb2_rxd_int_delay_;
   int cfeb3_rxd_int_delay_;
   //
-  int read_cfeb0_rxd_int_delay_; 
-  int read_cfeb1_rxd_int_delay_; 
-  int read_cfeb2_rxd_int_delay_; 
-  int read_cfeb3_rxd_int_delay_; 
+  int read_cfeb0_rxd_int_delay_;
+  int read_cfeb1_rxd_int_delay_;
+  int read_cfeb2_rxd_int_delay_;
+  int read_cfeb3_rxd_int_delay_;
   //
   //---------------------------------------------------------------------
   // 0X11E = ADR_DELAY1_INT:  CFEB to TMB "interstage" delays
   //---------------------------------------------------------------------
   int cfeb4_rxd_int_delay_;
   //
-  int read_cfeb4_rxd_int_delay_; 
+  int read_cfeb4_rxd_int_delay_;
   //
   //
   //---------------------------------------------------------------------
