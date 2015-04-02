@@ -1293,9 +1293,17 @@ public:
   void SetDistripHotChannelMask(int layer,long long int mask);
   long long int GetDistripHotChannelMask(int layer);
   //
+  //!layer=[0-5], mask=14 hex-characters for the 56 distrips right->left LSB->MSB.  So, to mask off channel 0, mask= fffffffffffffe
+  void SetDistripHotChannelMaskExt(int layer,long long int mask);
+  long long int GetDistripHotChannelMaskExt(int layer);
+  //
   //!Write registers whose values have been set by SetDistripHotChannelMask(...)
   void WriteDistripHotChannelMasks();
   void ReadDistripHotChannelMasks();
+  //
+  //!Write registers whose values have been set by SetDistripHotChannelMaskExt(...)
+  void WriteDistripHotChannelMasksExt();
+  void ReadDistripHotChannelMasksExt();
   //
   //------------------------------------------------------------------
   //0X68 = ADR_SEQ_TRIG_EN:  Sequencer Trigger Source Enables
@@ -1324,6 +1332,7 @@ public:
   //!clct_ext_trig_en = 1 = allow CLCT external triggers (scintillator) from CCB
   inline void SetClctExtTrigEnable(int clct_ext_trig_en) { clct_ext_trig_en_ = clct_ext_trig_en; }
   inline int  GetClctExtTrigEnable() { return clct_ext_trig_en_; }
+  inline int  GetReadClctExtTrigEnable() { return read_clct_ext_trig_en_; }
   //
   //!alct_ext_trig_en = 1 = allow ALCT external triggers from CCB
   inline void SetAlctExtTrigEnable(int alct_ext_trig_en) { alct_ext_trig_en_ = alct_ext_trig_en; }
@@ -1342,8 +1351,14 @@ public:
   inline int  GetEnableAllCfebsActive() { return all_cfeb_active_; }
   //
   //!cfebs_enabled_ = [0-31] -> normally copied from 0x42.  See TMB documentation before setting these bits...
+  //!7 bits for OTMB to control 0X17A = ADR_V6_EXTEND
   inline void SetCfebEnable(int cfebs_enabled) { cfebs_enabled_ = cfebs_enabled; }
   inline int  GetCfebEnable() { return cfebs_enabled_; }
+  inline int  GetReadCfebEnable() {
+    int val = (read_cfebs_enabled_ & 0x1f);
+    if (GetHardwareVersion()>= 2) val |= ((read_cfebs_enabled_extend_ & 0x3) << 5);
+    return val;
+  }
   //
   //! value = 42, 68 = VME register which controls the CFEB mask.  See TMB documentation before setting this value.
   void Set_cfeb_enable_source(int value);
@@ -1444,18 +1459,22 @@ public:
   //            FIFOMODE_NoCfebRaw_NoHeader      = 4;
   inline void SetFifoMode(int fifo_mode) { fifo_mode_ = fifo_mode; }
   inline int  GetFifoMode() { return fifo_mode_; }
+  inline int  GetReadFifoMode() { return read_fifo_mode_; }
   //
   //!fifo_tbins = [0-31] -> width of window for CLCT/RPC raw data readout (bx)
   inline void SetFifoTbins(int fifo_tbins) { fifo_tbins_ = fifo_tbins; }
   inline int  GetFifoTbins() { return fifo_tbins_ ; }
+  inline int  GetReadFifoTbins() { return read_fifo_tbins_ ; }
   //
   //!fifo_pretrig = [0-31] -> number of time bins before TMB pretrigger to begin data readout window (bx)
   inline void SetFifoPreTrig(int fifo_pretrig) { fifo_pretrig_ = fifo_pretrig; }
   inline int  GetFifoPreTrig() { return fifo_pretrig_; }
+  inline int  GetReadFifoPreTrig() { return read_fifo_pretrig_; }
   //
   //!fifo_no_raw_hits = [0-31] -> number of time bins before TMB pretrigger to begin data readout window (bx)
   inline void SetFifoNoRawHits(int fifo_no_raw_hits) { fifo_no_raw_hits_ = fifo_no_raw_hits; }
   inline int  GetFifoNoRawHits() { return fifo_no_raw_hits_; }
+  inline int  GetReadFifoNoRawHits() { return fifo_no_raw_hits_; } 
   //
   //!cfeb_badbits_readout = 1/0 = enable/disable readout of CFEB badbits into DMB
   inline void SetCFEBBadBitsReadout(int cfeb_badbits_readout) { cfeb_badbits_readout_ = cfeb_badbits_readout; }
@@ -2026,9 +2045,9 @@ public:
   //0X112 = ADR_PHASER2 digital phase shifter setting for cfeb0_rx
   //---------------------------------------------------------------------
   inline void SetCfeb0RxClockDelay(int cfeb0_rx_clock_delay) { cfeb0_rx_clock_delay_ = cfeb0_rx_clock_delay; }
-  inline void SetCFEB0delay(int cfeb0_rx_clock_delay)        { cfeb0_rx_clock_delay_ = cfeb0_rx_clock_delay; } //legacy setter
+  inline void SetCFEB0delay(int cfeb0_rx_clock_delay)        { SetCfeb0RxClockDelay(cfeb0_rx_clock_delay); } //legacy setter
   inline int  GetCfeb0RxClockDelay() { return cfeb0_rx_clock_delay_; }
-  inline int  GetCFEB0delay()        { return cfeb0_rx_clock_delay_; } //legacy getter
+  inline int  GetCFEB0delay()        { return GetCfeb0RxClockDelay(); } //legacy getter
   inline int  GetReadCfeb0RxClockDelay() { return read_cfeb0_rx_clock_delay_; }
   //
   inline void SetCfeb0RxPosNeg(int cfeb0_rx_posneg) { cfeb0_rx_posneg_ = cfeb0_rx_posneg; }
@@ -2039,9 +2058,9 @@ public:
   //0X114 = ADR_PHASER3 digital phase shifter setting for cfeb1_rx
   //---------------------------------------------------------------------
   inline void SetCfeb1RxClockDelay(int cfeb1_rx_clock_delay) { cfeb1_rx_clock_delay_ = cfeb1_rx_clock_delay; }
-  inline void SetCFEB1delay(int cfeb1_rx_clock_delay)        { cfeb1_rx_clock_delay_ = cfeb1_rx_clock_delay; } //legacy setter
+  inline void SetCFEB1delay(int cfeb1_rx_clock_delay)        { SetCfeb1RxClockDelay(cfeb1_rx_clock_delay); } //legacy setter
   inline int  GetCfeb1RxClockDelay() { return cfeb1_rx_clock_delay_; }
-  inline int  GetCFEB1delay()        { return cfeb1_rx_clock_delay_; } //legacy getter
+  inline int  GetCFEB1delay()        { return GetCfeb1RxClockDelay(); } //legacy getter
   inline int  GetReadCfeb1RxClockDelay() { return read_cfeb1_rx_clock_delay_; }
   //
   inline void SetCfeb1RxPosNeg(int cfeb1_rx_posneg) { cfeb1_rx_posneg_ = cfeb1_rx_posneg; }
@@ -2052,9 +2071,9 @@ public:
   //0X116 = ADR_PHASER4 digital phase shifter setting for cfeb2_rx
   //---------------------------------------------------------------------
   inline void SetCfeb2RxClockDelay(int cfeb2_rx_clock_delay) { cfeb2_rx_clock_delay_ = cfeb2_rx_clock_delay; }
-  inline void SetCFEB2delay(int cfeb2_rx_clock_delay)        { cfeb2_rx_clock_delay_ = cfeb2_rx_clock_delay; } //legacy setter
+  inline void SetCFEB2delay(int cfeb2_rx_clock_delay)        { SetCfeb2RxClockDelay(cfeb2_rx_clock_delay); } //legacy setter
   inline int  GetCfeb2RxClockDelay() { return cfeb2_rx_clock_delay_; }
-  inline int  GetCFEB2delay()        { return cfeb2_rx_clock_delay_; } //legacy getter
+  inline int  GetCFEB2delay()        { return GetCfeb2RxClockDelay(); } //legacy getter
   inline int  GetReadCfeb2RxClockDelay() { return read_cfeb2_rx_clock_delay_; }
   //
   inline void SetCfeb2RxPosNeg(int cfeb2_rx_posneg) { cfeb2_rx_posneg_ = cfeb2_rx_posneg; }
@@ -2065,9 +2084,9 @@ public:
   //0X118 = ADR_PHASER5 digital phase shifter setting for cfeb3_rx
   //---------------------------------------------------------------------
   inline void SetCfeb3RxClockDelay(int cfeb3_rx_clock_delay) { cfeb3_rx_clock_delay_ = cfeb3_rx_clock_delay; }
-  inline void SetCFEB3delay(int cfeb3_rx_clock_delay)        { cfeb3_rx_clock_delay_ = cfeb3_rx_clock_delay; } //legacy setter
+  inline void SetCFEB3delay(int cfeb3_rx_clock_delay)        { SetCfeb3RxClockDelay(cfeb3_rx_clock_delay); } //legacy setter
   inline int  GetCfeb3RxClockDelay() { return cfeb3_rx_clock_delay_; }
-  inline int  GetCFEB3delay()        { return cfeb3_rx_clock_delay_; } //legacy getter
+  inline int  GetCFEB3delay()        { return GetCfeb3RxClockDelay(); } //legacy getter
   inline int  GetReadCfeb3RxClockDelay() { return read_cfeb3_rx_clock_delay_; }
   //
   inline void SetCfeb3RxPosNeg(int cfeb3_rx_posneg) { cfeb3_rx_posneg_ = cfeb3_rx_posneg; }
@@ -2078,9 +2097,9 @@ public:
   //0X11A = ADR_PHASER6 digital phase shifter setting for cfeb4_rx
   //---------------------------------------------------------------------
   inline void SetCfeb4RxClockDelay(int cfeb4_rx_clock_delay) { cfeb4_rx_clock_delay_ = cfeb4_rx_clock_delay; }
-  inline void SetCFEB4delay(int cfeb4_rx_clock_delay)        { cfeb4_rx_clock_delay_ = cfeb4_rx_clock_delay; } //legacy setter
+  inline void SetCFEB4delay(int cfeb4_rx_clock_delay)        { SetCfeb4RxClockDelay(cfeb4_rx_clock_delay); } //legacy setter
   inline int  GetCfeb4RxClockDelay() { return cfeb4_rx_clock_delay_; }
-  inline int  GetCFEB4delay()        { return cfeb4_rx_clock_delay_; } //legacy getter
+  inline int  GetCFEB4delay()        { return GetCfeb4RxClockDelay(); } //legacy getter
   inline int  GetReadCfeb4RxClockDelay() { return read_cfeb4_rx_clock_delay_; }
   //
   inline void SetCfeb4RxPosNeg(int cfeb4_rx_posneg) { cfeb4_rx_posneg_ = cfeb4_rx_posneg; }
@@ -2088,27 +2107,94 @@ public:
   inline int  GetReadCfeb4RxPosNeg() { return read_cfeb4_rx_posneg_; }
   //
   //---------------------------------------------------------------------
+  //0X16A = ADR_V6_PHASER7 digital phase shifter setting for A side dcfebs - cfeb456_rx
+  //---------------------------------------------------------------------
+  inline void SetCfeb5RxClockDelay(int cfeb5_rx_clock_delay) { cfeb5_rx_clock_delay_ = cfeb5_rx_clock_delay; }
+  inline void SetCFEB5delay(int cfeb5_rx_clock_delay)        { SetCfeb5RxClockDelay(cfeb5_rx_clock_delay); } //legacy setter
+  inline int  GetCfeb5RxClockDelay() { return cfeb5_rx_clock_delay_; }
+  inline int  GetCFEB5delay()        { return GetCfeb5RxClockDelay(); } //legacy getter
+  inline int  GetReadCfeb5RxClockDelay() { return read_cfeb5_rx_clock_delay_; }
+  //
+  inline void SetCfeb5RxPosNeg(int cfeb5_rx_posneg) { cfeb5_rx_posneg_ = cfeb5_rx_posneg; }
+  inline int  GetCfeb5RxPosNeg() { return cfeb5_rx_posneg_; }
+  inline int  GetReadCfeb5RxPosNeg() { return read_cfeb5_rx_posneg_; }
+
+  inline void SetCfeb456RxClockDelay(int cfeb456_rx_clock_delay) { 
+    cfeb4_rx_clock_delay_ = cfeb456_rx_clock_delay; 
+    cfeb5_rx_clock_delay_ = cfeb456_rx_clock_delay; 
+    cfeb6_rx_clock_delay_ = cfeb456_rx_clock_delay; 
+    cfeb456_rx_clock_delay_ = cfeb456_rx_clock_delay; 
+  }
+  inline void SetCFEB456delay(int cfeb456_rx_clock_delay)        { SetCfeb456RxClockDelay(cfeb456_rx_clock_delay);  } //legacy setter
+  inline int  GetCfeb456RxClockDelay() { return cfeb456_rx_clock_delay_; }
+  inline int  GetCFEB456delay()        { return GetCfeb456RxClockDelay(); } //legacy getter
+  inline int  GetReadCfeb456RxClockDelay() { return read_cfeb456_rx_clock_delay_; }
+  //
+  inline void SetCfeb456RxPosNeg(int cfeb456_rx_posneg) { 
+    cfeb4_rx_posneg_ = cfeb456_rx_posneg; 
+    cfeb5_rx_posneg_ = cfeb456_rx_posneg; 
+    cfeb6_rx_posneg_ = cfeb456_rx_posneg; 
+    cfeb456_rx_posneg_ = cfeb456_rx_posneg; 
+  }
+  inline int  GetCfeb456RxPosNeg() { return cfeb456_rx_posneg_; }
+  inline int  GetReadCfeb456RxPosNeg() { return read_cfeb456_rx_posneg_; }
+  //
+  //---------------------------------------------------------------------
+  //0X16C = ADR_V6_PHASER8 digital phase shifter setting for B side dcfebs - cfeb0123_rx
+  //---------------------------------------------------------------------
+  inline void SetCfeb6RxClockDelay(int cfeb6_rx_clock_delay) { cfeb6_rx_clock_delay_ = cfeb6_rx_clock_delay; }
+  inline void SetCFEB6delay(int cfeb6_rx_clock_delay)        { SetCfeb6RxClockDelay(cfeb6_rx_clock_delay); } //legacy setter
+  inline int  GetCfeb6RxClockDelay() { return cfeb6_rx_clock_delay_; }
+  inline int  GetCFEB6delay()        { return GetCfeb6RxClockDelay(); } //legacy getter
+  inline int  GetReadCfeb6RxClockDelay() { return read_cfeb6_rx_clock_delay_; }
+  inline void SetCfeb6RxPosNeg(int cfeb6_rx_posneg) { cfeb6_rx_posneg_ = cfeb6_rx_posneg; }
+  inline int  GetCfeb6RxPosNeg() { return cfeb6_rx_posneg_; }
+  inline int  GetReadCfeb6RxPosNeg() { return read_cfeb6_rx_posneg_; }
+
+  inline void SetCfeb0123RxClockDelay(int cfeb0123_rx_clock_delay) { 
+    cfeb0_rx_clock_delay_ = cfeb0123_rx_clock_delay; 
+    cfeb1_rx_clock_delay_ = cfeb0123_rx_clock_delay; 
+    cfeb2_rx_clock_delay_ = cfeb0123_rx_clock_delay; 
+    cfeb3_rx_clock_delay_ = cfeb0123_rx_clock_delay; 
+    cfeb0123_rx_clock_delay_ = cfeb0123_rx_clock_delay; 
+  }
+  inline void SetCFEB0123delay(int cfeb0123_rx_clock_delay)        { SetCfeb0123RxClockDelay(cfeb0123_rx_clock_delay);  } //legacy setter
+  inline int  GetCfeb0123RxClockDelay() { return cfeb0123_rx_clock_delay_; }
+  inline int  GetCFEB0123delay()        { return GetCfeb0123RxClockDelay(); } //legacy getter
+  inline int  GetReadCfeb0123RxClockDelay() { return read_cfeb0123_rx_clock_delay_; }
+  //
+  inline void SetCfeb0123RxPosNeg(int cfeb0123_rx_posneg) { 
+    cfeb0_rx_posneg_ = cfeb0123_rx_posneg; 
+    cfeb1_rx_posneg_ = cfeb0123_rx_posneg; 
+    cfeb2_rx_posneg_ = cfeb0123_rx_posneg; 
+    cfeb3_rx_posneg_ = cfeb0123_rx_posneg; 
+    cfeb0123_rx_posneg_ = cfeb0123_rx_posneg; 
+  }
+  inline int  GetCfeb0123RxPosNeg() { return cfeb0123_rx_posneg_; }
+  inline int  GetReadCfeb0123RxPosNeg() { return read_cfeb0123_rx_posneg_; }
+  //
+  //---------------------------------------------------------------------
   // 0X11C = ADR_DELAY0_INT:  CFEB to TMB "interstage" delays
   //---------------------------------------------------------------------
   //!cfeb0_rxd_int_delay = delay of comparator data into CLCT algorithm (after latching) (bx)
   inline void SetCFEB0RxdIntDelay(int cfeb0_rxd_int_delay) { cfeb0_rxd_int_delay_ = cfeb0_rxd_int_delay; }
-  inline int  GetCFEB0RxdIntDelay() { return cfeb0_rxd_int_delay_; }
-  inline int  GetReadCFEB0RxdIntDelay() { return read_cfeb0_rxd_int_delay_; }
+  inline int  GetCFEB0RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? cfeb0123_rxd_int_delay_ :  cfeb0_rxd_int_delay_; }
+  inline int  GetReadCFEB0RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? read_cfeb0123_rxd_int_delay_ : read_cfeb0_rxd_int_delay_; }
   //
   //!cfeb1_rxd_int_delay = delay of comparator data into CLCT algorithm (after latching) (bx)
   inline void SetCFEB1RxdIntDelay(int cfeb1_rxd_int_delay) { cfeb1_rxd_int_delay_ = cfeb1_rxd_int_delay; }
-  inline int  GetCFEB1RxdIntDelay() { return cfeb1_rxd_int_delay_; }
-  inline int  GetReadCFEB1RxdIntDelay() { return read_cfeb1_rxd_int_delay_; }
+  inline int  GetCFEB1RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? cfeb0123_rxd_int_delay_ : cfeb1_rxd_int_delay_; }
+  inline int  GetReadCFEB1RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? read_cfeb0123_rxd_int_delay_ : read_cfeb1_rxd_int_delay_; }
   //
   //!cfeb2_rxd_int_delay = delay of comparator data into CLCT algorithm (after latching) (bx)
   inline void SetCFEB2RxdIntDelay(int cfeb2_rxd_int_delay) { cfeb2_rxd_int_delay_ = cfeb2_rxd_int_delay; }
-  inline int  GetCFEB2RxdIntDelay() { return cfeb2_rxd_int_delay_; }
-  inline int  GetReadCFEB2RxdIntDelay() { return read_cfeb2_rxd_int_delay_; }
+  inline int  GetCFEB2RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? cfeb0123_rxd_int_delay_ : cfeb2_rxd_int_delay_; }
+  inline int  GetReadCFEB2RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? read_cfeb0123_rxd_int_delay_ : read_cfeb2_rxd_int_delay_; }
   //
   //!cfeb3_rxd_int_delay = delay of comparator data into CLCT algorithm (after latching) (bx)
   inline void SetCFEB3RxdIntDelay(int cfeb3_rxd_int_delay) { cfeb3_rxd_int_delay_ = cfeb3_rxd_int_delay; }
-  inline int  GetCFEB3RxdIntDelay() { return cfeb3_rxd_int_delay_; }
-  inline int  GetReadCFEB3RxdIntDelay() { return read_cfeb3_rxd_int_delay_; }
+  inline int  GetCFEB3RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? cfeb0123_rxd_int_delay_ : cfeb3_rxd_int_delay_; }
+  inline int  GetReadCFEB3RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? read_cfeb0123_rxd_int_delay_ : read_cfeb3_rxd_int_delay_; }
   //
   //
   //---------------------------------------------------------------------
@@ -2116,8 +2202,43 @@ public:
   //---------------------------------------------------------------------
   //!cfeb4_rxd_int_delay = delay of comparator data into CLCT algorithm (after latching) (bx)
   inline void SetCFEB4RxdIntDelay(int cfeb4_rxd_int_delay) { cfeb4_rxd_int_delay_ = cfeb4_rxd_int_delay; }
-  inline int  GetCFEB4RxdIntDelay() { return cfeb4_rxd_int_delay_; }
-  inline int  GetReadCFEB4RxdIntDelay() { return read_cfeb4_rxd_int_delay_; }
+  inline int  GetCFEB4RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? cfeb456_rxd_int_delay_ : cfeb4_rxd_int_delay_; }
+  inline int  GetReadCFEB4RxdIntDelay() { return HasGroupedME11ABCFEBRxValues() == 1 ? read_cfeb456_rxd_int_delay_ : read_cfeb4_rxd_int_delay_; }
+  //! set is only for the special version
+  inline void SetCFEB5RxdIntDelay(int cfeb5_rxd_int_delay) { cfeb5_rxd_int_delay_ = cfeb5_rxd_int_delay; }
+  inline int  GetCFEB5RxdIntDelay() { 
+    assert(HasGroupedME11ABCFEBRxValues()>=0); 
+    return HasGroupedME11ABCFEBRxValues() == 1 ? cfeb456_rxd_int_delay_ : cfeb5_rxd_int_delay_; }
+  inline int  GetReadCFEB5RxdIntDelay() { 
+    assert(HasGroupedME11ABCFEBRxValues()>=0); 
+    return HasGroupedME11ABCFEBRxValues() == 1 ? read_cfeb456_rxd_int_delay_ : read_cfeb5_rxd_int_delay_; }
+  //
+  inline void SetCFEB6RxdIntDelay(int cfeb6_rxd_int_delay) { 
+    cfeb6_rxd_int_delay_ = cfeb6_rxd_int_delay; }
+  inline int  GetCFEB6RxdIntDelay() { 
+    assert(HasGroupedME11ABCFEBRxValues()>=0); 
+    return HasGroupedME11ABCFEBRxValues() == 1 ? cfeb456_rxd_int_delay_ : cfeb6_rxd_int_delay_; }
+  inline int  GetReadCFEB6RxdIntDelay() { 
+    assert(HasGroupedME11ABCFEBRxValues()>=0); 
+    return HasGroupedME11ABCFEBRxValues() == 1 ? read_cfeb456_rxd_int_delay_ : read_cfeb6_rxd_int_delay_; }
+  //
+  inline void SetCFEB0123RxdIntDelay(int cfeb0123_rxd_int_delay) { 
+    assert(HasGroupedME11ABCFEBRxValues()>0); 
+    cfeb0123_rxd_int_delay_ = cfeb0123_rxd_int_delay; 
+  }
+  inline int  GetCFEB0123RxdIntDelay() { 
+    assert(HasGroupedME11ABCFEBRxValues()>0); return  cfeb0123_rxd_int_delay_; }
+  inline int  GetReadCFEB0123RxdIntDelay() { 
+    assert(HasGroupedME11ABCFEBRxValues()>0); return  read_cfeb0123_rxd_int_delay_; }
+  //
+  inline void SetCFEB456RxdIntDelay(int cfeb456_rxd_int_delay) { 
+    assert(HasGroupedME11ABCFEBRxValues()>0); 
+    cfeb456_rxd_int_delay_ = cfeb456_rxd_int_delay; 
+  }
+  inline int  GetCFEB456RxdIntDelay() { 
+    assert(HasGroupedME11ABCFEBRxValues()>0); return  cfeb456_rxd_int_delay_; }
+  inline int  GetReadCFEB456RxdIntDelay() { 
+    assert(HasGroupedME11ABCFEBRxValues()>0); return  read_cfeb456_rxd_int_delay_; }
   //
   //
   //---------------------------------------------------------------------
@@ -2190,7 +2311,7 @@ public:
   //---------------------------------------------------------------------
   // 0X122 = ADR_CFEB_BADBITS_CTRL:  CFEB badbits control/status
   //---------------------------------------------------------------------
-  //!cfeb_badbits_reset = 1 = Set the reset bit for the "badbits" marker for all 5 CFEBs
+  //!cfeb_badbits_reset = 1 = Set the reset bit for the "badbits" marker for the first 5 CFEBs
   void SetCFEBBadBitsReset(int cfeb_badbits_reset);
   int  GetCFEBBadBitsReset();
   int  GetReadCFEBBadBitsReset();
@@ -2215,6 +2336,175 @@ public:
   inline int  GetCFEBBadBitsNbx() { return cfeb_badbits_nbx_; }
   inline int  GetReadCFEBBadBitsNbx() { return read_cfeb_badbits_nbx_; }
   //
+  //---------------------------------------------------------------------
+  // 0X146 = ADR_ALCT_STARTUP_STATUS: ALCT startup delay machine status
+  //---------------------------------------------------------------------
+  inline int GetReadGlobalReset() { return read_global_reset_; }
+  inline int GetReadPowerUp()  { return read_power_up_; }
+  inline int GetReadVSMReady() { return read_vsm_ready_; }
+  inline int GetReadALCTStartupMsec() { return read_alct_startup_msec_; }
+  inline int GetReadALCTWaitDLL() { return read_alct_wait_dll_; }
+  inline int GetReadALCTWaitVME() { return read_alct_wait_vme_; }
+  inline int GetReadALCTWaitCfg() { return read_alct_wait_cfg_; }
+  inline int GetReadALCTStartupDone() { return read_alct_startup_done_; }
+  inline int GetReadMMCMLostLockCount() { return read_mmcm_lostlock_count_; }
+  //
+  //---------------------------------------------------------------------
+  // 0X148 = ADR_V6_SNAP12_QUPLL: Virtex-6 SNAP12 Serial interface + QPLL status
+  //---------------------------------------------------------------------
+  //nRest QPLL, 0=reset
+  inline void SetQPLLNrst(int qpll_nrst) { qpll_nrst_ =	qpll_nrst; }
+  inline int  GetQPLLNrst() { return qpll_nrst_; }
+  inline int  GetReadQPLLNrst() { return read_qpll_nrst_; }
+
+  inline int GetReadQPLLLock() { return read_qpll_lock_; }
+  inline int GetReadQPLLErr() { return read_qpll_err_; }
+  inline int GetReadQPLLLostLock() { return read_qpll_lostlock_; }
+  inline int GetReadR12Sclk() { return read_r12_sclk_; }
+  inline int GetReadR12Sdat() { return read_r12_sdat_; }
+  inline int GetReadR12Fok() { return read_r12_fok_; }
+  inline int GetReadMMCMLostLock() { return read_mmcm_lostlock_; }
+  inline int GetReadQPLLLostLockCount() { return read_qpll_lostlock_count_; }
+  //
+  //---------------------------------------------------------------------
+  // 0X14A = ADR_V6_GTX_RX_ALL: GTX link control and monitoring
+  //---------------------------------------------------------------------
+  //Enable this GTX optical input,  disables copper input
+  inline void SetGtxRxAllEnable(int gtx_rx_enable) { gtx_rx_enable_all_ = gtx_rx_enable; }
+  inline int  GetGtxRxAllEnable() { return gtx_rx_enable_all_; }
+  inline int  GetReadGtxRxAllEnable() { return read_gtx_rx_enable_all_; }
+
+  //Reset this GTX
+  inline void SetGtxRxAllReset(int gtx_rx_reset) { gtx_rx_reset_all_ = gtx_rx_reset; }
+  inline int  GetGtxRxAllReset() { return gtx_rx_reset_all_; }
+  inline int  GetReadGtxRxAllReset() { return read_gtx_rx_reset_all_; }
+
+  //Select this GTX for PRBS test input mode
+  inline void SetGtxRxAllPrbsTestEnable(int gtx_rx_prbs_test_enable) { gtx_rx_prbs_test_enable_all_ = gtx_rx_prbs_test_enable; }
+  inline int  GetGtxRxAllPrbsTestEnable() { return gtx_rx_prbs_test_enable_all_; }
+  inline int  GetReadGtxRxAllPrbsTestEnable() { return read_gtx_rx_prbs_test_enable_all_; }
+
+  //GTX ready
+  inline int  GetReadGtxRxAllReady() { return read_gtx_rx_ready_all_; }
+
+  //GTX link is locked (over 15 BX with clean data frames)
+  inline int  GetReadGtxRxAllLinkGood() { return read_gtx_rx_link_good_all_; }
+
+  //GTX link had an error (bad data frame) since last reset
+  inline int  GetReadGtxRxAllLinkHadError() { return read_gtx_rx_link_had_error_all_; }
+
+  //GTX link had over 100 errors since last reset
+  inline int  GetReadGtxRxAllLinkBad() { return read_gtx_rx_link_bad_all_; }
+
+  //GTX 5,6 [ie dcfeb 4,5] have swapped rx board routes
+  inline int  GetReadGtxRxAllPolSwap() { return read_gtx_rx_pol_swap_all_; }
+
+  //GTX link error count (full scale count is hex E0)
+  inline int  GetReadGtxRxAllErrorCount() { return read_gtx_rx_error_count_all_; }
+  //
+  //---------------------------------------------------------------------
+  // 0X14C - 0X158 = ADR_V6_GTX_RX[CFEB]: GTX link control and monitoring
+  //---------------------------------------------------------------------
+  //Enable this GTX optical input,  disables copper input
+  inline void SetGtxRxEnable(int cfebNum, int gtx_rx_enable) { gtx_rx_enable_[cfebNum] = gtx_rx_enable; }
+  inline int  GetGtxRxEnable(int cfebNum) { return gtx_rx_enable_[cfebNum]; }
+  inline int  GetReadGtxRxEnable(int cfebNum) { return read_gtx_rx_enable_[cfebNum]; }
+  
+  //Reset this GTX
+  inline void SetGtxRxReset(int cfebNum, int gtx_rx_reset) { gtx_rx_reset_[cfebNum] = gtx_rx_reset; }
+  inline int  GetGtxRxReset(int cfebNum) { return gtx_rx_reset_[cfebNum]; }
+  inline int  GetReadGtxRxReset(int cfebNum) { return read_gtx_rx_reset_[cfebNum]; }
+  
+  //Select this GTX for PRBS test input mode
+  inline void SetGtxRxPrbsTestEnable(int cfebNum, int gtx_rx_prbs_test_enable) { gtx_rx_prbs_test_enable_[cfebNum] = gtx_rx_prbs_test_enable; }
+  inline int  GetGtxRxPrbsTestEnable(int cfebNum) { return gtx_rx_prbs_test_enable_[cfebNum]; }
+  inline int  GetReadGtxRxPrbsTestEnable(int cfebNum) { return read_gtx_rx_prbs_test_enable_[cfebNum]; }
+
+  //Writes all GTX control registers to FPGA
+  void WriteGtxControlRegisters();
+  
+  //GTX ready
+  inline int  GetReadGtxRxReady(int cfebNum) { return read_gtx_rx_ready_[cfebNum]; }
+  
+  //GTX link is locked (over 15 BX with clean data frames)
+  inline int  GetReadGtxRxLinkGood(int cfebNum) { return read_gtx_rx_link_good_[cfebNum]; }
+  
+  //GTX link had an error (bad data frame) since last reset
+  inline int  GetReadGtxRxLinkHadError(int cfebNum) { return read_gtx_rx_link_had_error_[cfebNum]; }
+  
+  //GTX link had over 100 errors since last reset
+  inline int  GetReadGtxRxLinkBad(int cfebNum) { return read_gtx_rx_link_bad_[cfebNum]; }
+  
+  //GTX 5,6 [ie dcfeb 4,5] have swapped rx board routes
+  inline int  GetReadGtxRxPolSwap(int cfebNum) { return read_gtx_rx_pol_swap_[cfebNum]; }
+  
+  //GTX link error count (full scale count is hex E0)
+  inline int  GetReadGtxRxErrorCount(int cfebNum) { return read_gtx_rx_error_count_[cfebNum]; }
+  
+  //
+  //----------------------------------------------------------------
+  //0X17A = ADR_V6_EXTEND: ADR_CFEB_INJ:  CFEB Injector Control; ADR_SEQ_TRIG_EN: 
+  //----------------------------------------------------------------
+  //!enableCLCTInputs for 5-6 = [0-3]... 2 bit mask, 1 bit per CFEB -> each bit [0,1] = [disable,enable] CFEB input
+  //!register-reads only. Configuration is controlled by one value enableCLCTInputs_ and can be read in a fuse by GetReadEnableCLCTInputs()
+  //
+  //!cfeb_ram_sel for 5-6 = [0-3]... 2 bit mask, 1 bit per CFEB -> each bit [0,1] = [do not select,select] CFEB for RAM read/write
+  //!register-reads only. Configuration is controlled by one value cfeb_ram_sel_ and can be read in a fuse by GetReadSelectCLCTRAM()
+  //
+  //!cfeb_inj_en_sel for 5-6 = [0-3]... 2 bit mask, 1 bit per CFEB -> each bit [0,1] = [disable,enable] CFEB for injector trigger
+  //!register-reads only. Configuration is controlled by one value cfeb_inj_en_sel_ and can be read in a fuse by GetReadEnableCLCTInject()
+  //
+  //!cfebs_enabled_extend for 5-6 = [0-3] -> normally copied from 0x42.  See TMB documentation before setting these bits...
+  //!register-reads only. Configuration is controlled by one value cfebs_enabled_ and can be read in a fuse by GetReadCfebEnable()
+  //
+  //!cfebs_enabled_extend_readback  = should be the same as GetReadCfebEnable for bits 5-6 
+  inline int  GetReadCfebEnableExtendReadback() { return read_cfebs_enabled_extend_readback_; }
+  //
+  //
+  //---------------------------------------------------------------------
+  // 0X186 = ADR_TMB_MMCM_LOCK_TIME
+  //---------------------------------------------------------------------
+  inline int GetReadTMBMMCMLockTime() { return read_tmb_mmcm_lock_time_;}
+  //---------------------------------------------------------------------
+  // 0X188 = ADR_TMB_POWER_UP_TIME
+  //---------------------------------------------------------------------
+  inline int GetReadTMBPowerUpTime() { return read_tmb_power_up_time_;}
+  //---------------------------------------------------------------------
+  // 0X18A = ADR_TMB_LOAD_CFG_TIME
+  //---------------------------------------------------------------------
+  inline int GetReadTMBLoadCfgTime() { return read_tmb_load_cfg_time_;}
+  //---------------------------------------------------------------------
+  // 0X18C = ADR_ALCT_PHASER_LOCK_TIME
+  //---------------------------------------------------------------------
+  inline int GetReadALCTPhaserLockTime() { return read_alct_phaser_lock_time_;}
+  //---------------------------------------------------------------------
+  // 0X18E = ADR_ALCT_LOAD_CFG_TIME
+  //---------------------------------------------------------------------
+  inline int GetReadALCTLoadCfgTime() { return read_alct_load_cfg_time_;}
+  //---------------------------------------------------------------------
+  // 0X190 = ADR_GTX_RST_DONE_TIME
+  //---------------------------------------------------------------------
+  inline int GetReadGtxRstDoneTime() { return read_gtx_rst_done_time_;}
+  //---------------------------------------------------------------------
+  // 0X192 = ADR_GTX_SYNC_DONE_TIME
+  //---------------------------------------------------------------------
+  inline int GetReadGtxSyncDoneTime() { return read_gtx_sync_done_time_;}
+  //
+  //---------------------------------------------------------------------
+  // 0X15C ADR_V6_CFEB_BADBITS_CTRL: CFEB Bad Bits Control/Status (See Adr 0x122) (extra DCFEB Bad Bits on OTMB)
+  //---------------------------------------------------------------------
+  //!dcfeb_badbits_reset = 1 = Set the reset bit for the "badbits" marker for the last 2 CFEBs
+  void SetDCFEB56BadBitsReset(int dcfeb_badbits_reset);
+  int  GetDCFEB56BadBitsReset();
+  int  GetReadDCFEB56BadBitsReset();
+  //
+  //!dcfeb_badbits_block = 1 = Block channels which have been determined to be "badbits" by the firmware
+  void SetDCFEB56BadBitsBlock(int dcfeb_badbits_block);
+  int  GetDCFEB56BadBitsBlock();
+  int  GetReadDCFEB56BadBitsBlock();
+  //
+  //!Bit mask for which CFEB has a bad bit found on it...
+  inline int GetReadDCFEBBadBitsFound() { return read_dcfeb_badbits_found_; }
   //
   //------------------------------------------------------------------
   //0X126,128,12A = ADR_BADBITS001,BADBITS023,BADBITS045 = CFEB0 BadBits Masks
@@ -2230,16 +2520,16 @@ public:
   //!layer=[0-5], distrip=[0-39] = 1 = "bad"
   inline int  GetComparatorBadBit(int layer,int distrip) { return read_badbits_[layer][distrip]; }
   //
-	//------------------------------------------------------------------
-	//0X184 = ADR_MPC_FRAMES_FIFO_CTRL:  Controls FIFO
-	//------------------------------------------------------------------
-	inline void SetMPCFramesFifoCtrlWrEn(int mpc_frames_fifo_ctrl_wr_en) { mpc_frames_fifo_ctrl_wr_en_ = mpc_frames_fifo_ctrl_wr_en; }
-	inline int  GetMPCFramesFifoCtrlWrEn() { return mpc_frames_fifo_ctrl_wr_en_; }
-	inline int  GetReadMPCFramesFifoCtrlWrEn() { return read_mpc_frames_fifo_ctrl_wr_en_; }
+  //------------------------------------------------------------------
+  //0X184 = ADR_MPC_FRAMES_FIFO_CTRL:  Controls FIFO
+  //------------------------------------------------------------------
+  inline void SetMPCFramesFifoCtrlWrEn(int mpc_frames_fifo_ctrl_wr_en) { mpc_frames_fifo_ctrl_wr_en_ = mpc_frames_fifo_ctrl_wr_en; }
+  inline int  GetMPCFramesFifoCtrlWrEn() { return mpc_frames_fifo_ctrl_wr_en_; }
+  inline int  GetReadMPCFramesFifoCtrlWrEn() { return read_mpc_frames_fifo_ctrl_wr_en_; }
 
-	inline void SetMPCFramesFifoCtrlRdEn(int mpc_frames_fifo_ctrl_rd_en) { mpc_frames_fifo_ctrl_rd_en_ = mpc_frames_fifo_ctrl_rd_en; }
-	inline int  GetMPCFramesFifoCtrlRdEn() { return mpc_frames_fifo_ctrl_rd_en_; }
-	inline int  GetReadMPCFramesFifoCtrlRdEn() { return read_mpc_frames_fifo_ctrl_rd_en_; }
+  inline void SetMPCFramesFifoCtrlRdEn(int mpc_frames_fifo_ctrl_rd_en) { mpc_frames_fifo_ctrl_rd_en_ = mpc_frames_fifo_ctrl_rd_en; }
+  inline int  GetMPCFramesFifoCtrlRdEn() { return mpc_frames_fifo_ctrl_rd_en_; }
+  inline int  GetReadMPCFramesFifoCtrlRdEn() { return read_mpc_frames_fifo_ctrl_rd_en_; }
   //
   // **********************************************************************************
   //
@@ -2247,6 +2537,7 @@ public:
   int  FillTMBRegister(unsigned long int address);
   //
   void UnjamFPGA();
+  void UnjamFPGAMini();
   //
   void ReadTmbIdCodes();
   inline int GetTMBmezzFpgaIdCode() { return tmb_idcode_[0]; }
@@ -2314,6 +2605,7 @@ public:
   void PrintJTAGStateMachine();
   void PrintRawHitsHeader();
   void PrintDDDStateMachine();
+  void PrintBadBits();
   //
   void PrintTMBRegister(unsigned long int address);
   void PrintFirmwareDate();
@@ -2422,13 +2714,13 @@ private:
   int mpc0_frame1_data_;
   int mpc1_frame0_data_;
   int mpc1_frame1_data_;
-	//
+  //
   int mpc0_frame0_fifo_data_;
   int mpc0_frame1_fifo_data_;
   int mpc1_frame0_fifo_data_;
   int mpc1_frame1_fifo_data_;
-	//
-	int mpc_frames_fifo_ctrl_data_;
+  //
+  int mpc_frames_fifo_ctrl_data_;
   //
   int ALCT0_data_;
   int ALCT1_data_;
@@ -2792,13 +3084,17 @@ private:
   //0X56,58,5A = ADR_HCM201,HCM223,HCM245 = CFEB2 Hot Channel Masks
   //0X5C,5E,60 = ADR_HCM301,HCM323,HCM345 = CFEB3 Hot Channel Masks
   //0X62,64,66 = ADR_HCM401,HCM423,HCM445 = CFEB4 Hot Channel Masks
+  //0x16E,170,172 = ADR_HCM401,HCM423,HCM445 = CFEB5 Hot Channel Masks  --- added on OTMB
+  //0x174,176,178 = ADR_HCM401,HCM423,HCM445 = CFEB6 Hot Channel Masks  --- added on OTMB
   //------------------------------------------------------------------
   int GetHotChannelLayerFromMap_(unsigned long int vme_address, int bit_in_register);
+  int GetHotChannelLayerFromMapExt_(unsigned long int vme_address, int bit_in_register);
   int GetHotChannelDistripFromMap_(unsigned long int vme_address, int bit_in_register);
+  int GetHotChannelDistripFromMapExt_(unsigned long int vme_address, int bit_in_register);
   //
-  int hot_channel_mask_[MAX_NUM_LAYERS][MAX_NUM_DISTRIPS_PER_LAYER];
+  int hot_channel_mask_[MAX_NUM_LAYERS][MAX_NUM_DISTRIPS_PER_LAYER_EXT];
   //
-  int read_hot_channel_mask_[MAX_NUM_LAYERS][MAX_NUM_DISTRIPS_PER_LAYER];
+  int read_hot_channel_mask_[MAX_NUM_LAYERS][MAX_NUM_DISTRIPS_PER_LAYER_EXT];
   //
   //------------------------------------------------------------------
   //0X68 = ADR_SEQ_TRIG_EN:  Sequencer Trigger Source Enables
@@ -3500,6 +3796,34 @@ private:
   int read_cfeb4_rx_posneg_;
   //
   //
+  //--------------------------------------------------------------
+  //[0X16A] = ADR_V6_PHASER7:  values in the xml file for A side dcfebs - cfeb456_rx
+  //--------------------------------------------------------------
+  int cfeb456_rx_clock_delay_ ;
+  int cfeb456_rx_posneg_;
+  int cfeb5_rx_clock_delay_ ;
+  int cfeb5_rx_posneg_;
+  //
+  int read_cfeb456_rx_clock_delay_ ;
+  int read_cfeb456_rx_posneg_;
+  int read_cfeb5_rx_clock_delay_ ;
+  int read_cfeb5_rx_posneg_;
+  //
+  //
+  //--------------------------------------------------------------
+  //[0X16C] = ADR_V6_PHASER8:  values in the xml file for B side dcfebs - cfeb0123_rx
+  //--------------------------------------------------------------
+  int cfeb0123_rx_clock_delay_ ;
+  int cfeb0123_rx_posneg_;
+  int cfeb6_rx_clock_delay_ ;
+  int cfeb6_rx_posneg_;
+  //
+  int read_cfeb0123_rx_clock_delay_ ;
+  int read_cfeb0123_rx_posneg_;
+  int read_cfeb6_rx_clock_delay_ ;
+  int read_cfeb6_rx_posneg_;
+  //
+  //
   //!convert the user value to values which are written to the VME Register
   int ConvertDigitalPhaseToVMERegisterValues_(int digital_phase,int posneg);
   //
@@ -3523,8 +3847,17 @@ private:
   // 0X11E = ADR_DELAY1_INT:  CFEB to TMB "interstage" delays
   //---------------------------------------------------------------------
   int cfeb4_rxd_int_delay_;
+  int cfeb5_rxd_int_delay_;
+  int cfeb6_rxd_int_delay_;
+  int cfeb456_rxd_int_delay_;
+  int cfeb0123_rxd_int_delay_;
+  
   //
   int read_cfeb4_rxd_int_delay_;
+  int read_cfeb5_rxd_int_delay_; 
+  int read_cfeb6_rxd_int_delay_; 
+  int read_cfeb456_rxd_int_delay_; 
+  int read_cfeb0123_rxd_int_delay_; 
   //
   //
   //---------------------------------------------------------------------
@@ -3577,6 +3910,125 @@ private:
   int read_cfeb_badbits_nbx_;
   //
   //
+  //---------------------------------------------------------------------
+  // 0X146 = ADR_ALCT_STARTUP_STATUS: ALCT startup delay machine status
+  //---------------------------------------------------------------------
+  int read_global_reset_;
+  int read_power_up_;
+  int read_vsm_ready_;
+  int read_alct_startup_msec_;
+  int read_alct_wait_dll_;
+  int read_alct_wait_vme_;
+  int read_alct_wait_cfg_;
+  int read_alct_startup_done_;
+  int read_mmcm_lostlock_count_;
+  //
+  //
+  //---------------------------------------------------------------------
+  // 0X148 = ADR_V6_SNAP12_QUPLL: Virtex-6 SNAP12 Serial interface + QPLL status
+  //---------------------------------------------------------------------
+  int qpll_nrst_;
+
+  int read_qpll_nrst_;
+  int read_qpll_lock_;
+  int read_qpll_err_;
+  int read_qpll_lostlock_;
+  int read_r12_sclk_;
+  int read_r12_sdat_;
+  int read_r12_fok_;
+  int read_mmcm_lostlock_;
+  int read_qpll_lostlock_count_;
+  //
+  //
+  //---------------------------------------------------------------------
+  // 0X14A = ADR_V6_GTX_RX_ALL: GTX link control and monitoring
+  //---------------------------------------------------------------------
+  int gtx_rx_enable_all_;
+  int gtx_rx_reset_all_;
+  int gtx_rx_prbs_test_enable_all_;
+
+  int read_gtx_rx_enable_all_;
+  int read_gtx_rx_reset_all_;
+  int read_gtx_rx_prbs_test_enable_all_;
+  int read_gtx_rx_ready_all_;
+  int read_gtx_rx_link_good_all_;
+  int read_gtx_rx_link_had_error_all_;
+  int read_gtx_rx_link_bad_all_;
+  int read_gtx_rx_pol_swap_all_;
+  int read_gtx_rx_error_count_all_;
+  //
+  //---------------------------------------------------------------------
+  // 0X14C - 0X158 = ADR_V6_GTX_RX[CFEB]: GTX link control and monitoring
+  //---------------------------------------------------------------------
+  int gtx_rx_enable_[7];
+  int gtx_rx_reset_[7];
+  int gtx_rx_prbs_test_enable_[7];
+  
+  int read_gtx_rx_enable_[7];
+  int read_gtx_rx_reset_[7];
+  int read_gtx_rx_prbs_test_enable_[7];
+  int read_gtx_rx_ready_[7];
+  int read_gtx_rx_link_good_[7];
+  int read_gtx_rx_link_had_error_[7];
+  int read_gtx_rx_link_bad_[7];
+  int read_gtx_rx_pol_swap_[7];
+  int read_gtx_rx_error_count_[7];
+  //
+  //---------------------------------------------------------------------
+  // 0X15C ADR_V6_CFEB_BADBITS_CTRL: CFEB Bad Bits Control/Status (See Adr 0x122) (extra DCFEB Bad Bits on OTMB)
+  //---------------------------------------------------------------------
+  int dcfeb_badbits_reset_  ;
+  int dcfeb_badbits_block_  ;
+  //
+  int read_dcfeb_badbits_reset_  ;
+  int read_dcfeb_badbits_block_  ;
+  int read_dcfeb_badbits_found_  ;
+  //
+  //------------------------------------------------------------------
+  //0X17A = ADR_V6_EXTEND: extensions of ADR_CFEB_INJ and ADR_SEQ_TRIG_EN 
+  //------------------------------------------------------------------
+  //! only register reads are kept ; settings are from the common place
+  int read_enableCLCTInputs_extend_;
+  int read_cfeb_ram_sel_extend_;
+  int read_cfeb_inj_en_sel_extend_;
+  //
+  int read_cfebs_enabled_extend_;
+  int read_cfebs_enabled_extend_readback_;
+  //---------------------------------------------------------------------
+  // 0X186 = ADR_TMB_MMCM_LOCK_TIME
+  //---------------------------------------------------------------------
+  int read_tmb_mmcm_lock_time_;
+  //
+  //---------------------------------------------------------------------
+  // 0X188 = ADR_TMB_POWER_UP_TIME
+  //---------------------------------------------------------------------
+  int read_tmb_power_up_time_;
+  //
+  //---------------------------------------------------------------------
+  // 0X18A = ADR_TMB_LOAD_CFG_TIME
+  //---------------------------------------------------------------------
+  int read_tmb_load_cfg_time_;
+  //
+  //---------------------------------------------------------------------
+  // 0X18C = ADR_ALCT_PHASER_LOCK_TIME
+  //---------------------------------------------------------------------
+  int read_alct_phaser_lock_time_;
+  //
+  //---------------------------------------------------------------------
+  // 0X18E = ADR_ALCT_LOAD_CFG_TIME
+  //---------------------------------------------------------------------
+  int read_alct_load_cfg_time_;
+  //
+  //---------------------------------------------------------------------
+  // 0X190 = ADR_GTX_RST_DONE_TIME
+  //---------------------------------------------------------------------
+  int read_gtx_rst_done_time_;
+  //
+  //---------------------------------------------------------------------
+  // 0X192 = ADR_GTX_SYNC_DONE_TIME
+  //---------------------------------------------------------------------
+  int read_gtx_sync_done_time_;
+
   //------------------------------------------------------------------
   //0X126,128,12A = ADR_BADBITS001,BADBITS023,BADBITS045 = CFEB0 BadBits Masks
   //0X12C,12E,130 = ADR_BADBITS101,BADBITS123,BADBITS145 = CFEB1 BadBits Masks
@@ -3584,24 +4036,25 @@ private:
   //0X138,13A,13C = ADR_BADBITS301,BADBITS323,BADBITS345 = CFEB3 BadBits Masks
   //0X13E,140,142 = ADR_BADBITS401,BADBITS423,BADBITS445 = CFEB4 BadBits Masks
   //------------------------------------------------------------------
-  int read_badbits_[MAX_NUM_LAYERS][MAX_NUM_DISTRIPS_PER_LAYER];
-	//
-	//
-	//------------------------------------------------------------------
-	//0X184 = ADR_MPC_FRAMES_FIFO_CTRL:  Controls FIFO
-	//------------------------------------------------------------------
-	int mpc_frames_fifo_ctrl_wr_en_;
-	int mpc_frames_fifo_ctrl_rd_en_;
-	//
-	int read_mpc_frames_fifo_ctrl_wr_en_;
-	int read_mpc_frames_fifo_ctrl_rd_en_;
-	int read_mpc_frames_fifo_ctrl_full_;
-	int read_mpc_frames_fifo_ctrl_wr_ack_;
-	int read_mpc_frames_fifo_ctrl_overflow_;
-	int read_mpc_frames_fifo_ctrl_empty_;
-	int read_mpc_frames_fifo_ctrl_prog_full_;
-	int read_mpc_frames_fifo_ctrl_sbiterr_;
-	int read_mpc_frames_fifo_ctrl_sditter_;
+  int read_badbits_[MAX_NUM_LAYERS][MAX_NUM_DISTRIPS_PER_LAYER_EXT];
+  //
+  //
+  //------------------------------------------------------------------
+  //0X184 = ADR_MPC_FRAMES_FIFO_CTRL:  Controls FIFO
+  //------------------------------------------------------------------
+  int mpc_frames_fifo_ctrl_wr_en_;
+  int mpc_frames_fifo_ctrl_rd_en_;
+  //
+  int read_mpc_frames_fifo_ctrl_wr_en_;
+  int read_mpc_frames_fifo_ctrl_rd_en_;
+  int read_mpc_frames_fifo_ctrl_full_;
+  int read_mpc_frames_fifo_ctrl_wr_ack_;
+  int read_mpc_frames_fifo_ctrl_overflow_;
+  int read_mpc_frames_fifo_ctrl_empty_;
+  int read_mpc_frames_fifo_ctrl_prog_full_;
+  int read_mpc_frames_fifo_ctrl_sbiterr_;
+  int read_mpc_frames_fifo_ctrl_sditter_;
+  //
   //
   //
   //*******************************************************************
